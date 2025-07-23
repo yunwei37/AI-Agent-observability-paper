@@ -1,0 +1,108 @@
+
+\documentclass[sigplan,screen，review,9pt]{acmart}
+\settopmatter{printacmref=false, printccs=false, printfolios=false}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+
+\usepackage{listings}     % For ASCII-art / code blocks
+\usepackage{booktabs}     % Nicer tables
+\usepackage{array}        % Column types
+\usepackage{tabularx}     % Automatic column width
+\usepackage{enumitem}     % Compact lists
+
+\usepackage{fontspec}   % 字体支持
+\usepackage{newunicodechar} % 自定义 Unicode 字符
+\usepackage{fancyvrb}   % 增强的 verbatim 环境
+
+% 设置等宽字体（选择支持这些符号的字体）
+\setmonofont{DejaVu Sans Mono}[Scale=MatchLowercase]  % 或 Noto Sans Mono, Fira Code 等
+
+% 定义方框字符（可选，确保正确渲染）
+\newunicodechar{┌}{\symbol{"250C}} % 上左角
+\newunicodechar{┐}{\symbol{"2510}} % 上右角
+\newunicodechar{└}{\symbol{"2514}} % 下左角
+\newunicodechar{┘}{\symbol{"2518}} % 下右角
+\newunicodechar{─}{\symbol{"2500}} % 横线
+\newunicodechar{│}{\symbol{"2502}} % 竖线
+\newunicodechar{☁}{{\fontspec{Symbola}\symbol{"2601}}} % 云朵符号
+
+\begin{document}
+
+\title{AI Agent Observability}
+
+
+\author{}
+
+
+\sloppy
+\begin{abstract}
+AI agents exhibit non-deterministic, evolving behaviors that render traditional monitoring inadequate. Current framework-specific instrumentation suffers from fragility against rapid evolution and security vulnerabilities like prompt injection. We propose boundary tracing—a zero-instrumentation approach using eBPF to capture semantics at kernel/network interfaces. This provides tamper-resistant, framework-agnostic visibility into prompt execution, tool interactions, and critical failures, bridging the semantic gap for robust auditing and debugging.
+\end{abstract}
+
+
+\maketitle
+
+
+
+\section{The Fundamental Observability Challenge}
+
+AI agents operate differently from traditional systems. Where conventional monitoring focuses on metrics like latency and CPU usage, AI agents require semantic understanding of reasoning traces, tool interactions, and emergent failure modes. This creates three core challenges: First, the rapid evolution of agent frameworks means instrumentation becomes obsolete within weeks as prompts, tools, and workflows change. Second, non-deterministic outputs make failure detection complex—hallucinations, infinite reasoning loops, and coordination failures lack clear signatures. Third, security vulnerabilities like prompt injection allow compromised agents to tamper with their own monitoring.
+
+Key differences in observability requirements include the shift from resource metrics to semantic traces, from deterministic failures to open-ended quality judgments, and from request-scoped state to persistent memories lasting hours or days. Crucially, the primary signal source moves from structured logs to encrypted TLS payloads and CLI executions, while security auditing requires tamper-proof evidence of reasoning processes rather than just code execution paths.
+
+
+\section{Limitations in Current Solutions}
+
+Analysis of 12 leading tools (LangSmith, Traceloop, Phoenix, etc.) reveals critical limitations. All solutions require application-level instrumentation—either through SDKs or proxies—making them vulnerable to three failure modes: Framework changes break instrumentation when agents modify prompts or tool wiring; compromised agents can suppress or falsify logs during prompt injection attacks; cross-process interactions become invisible when agents directly execute system commands. Because today’s solutions \emph{mostly} live inside the agent process, they inherit the same fragility as the agent code:
+
+\begin{itemize}
+  \item \textbf{Breakage when you tweak the prompt graph} – each new node needs a decorator.
+  \item \textbf{Evasion by malicious prompts} – compromised agent can drop or fake logs.
+  \item \textbf{Blind to cross-process side effects} – e.g., writing a shell script then \verb|execve()|-ing it.
+\end{itemize}
+
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{p{0.45\columnwidth} p{0.45\columnwidth}}
+\toprule
+\textbf{Where today's SDKs stop} & \textbf{What boundary tracing would still see} \\
+\midrule
+Missing span when agent spawns \texttt{curl} directly & \texttt{execve("curl", ...)} + network write \\
+Agent mutates its own prompt string before logging & Raw ciphertext leaving the TLS socket \\
+Sub-process mis-uses GPU & \texttt{ioctl} + CUDA driver calls \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Key Insight and Observation}
+
+All meaningful interactions traverse two clear boundaries.   AI-agent observability must be decoupled from agent internals.
+  Observing from the boundary provides a stable semantic interface.
+
+An agent-centric stack as three nested circles:
+\begin{itemize}
+  \item \textbf{LLM serving provider} – token generation, non-deterministic reasoning, chain-of-thought text that may or may not be surfaced. Most system work are around the llm serving layer.
+  \item \textbf{Agent runtime layer} – turns tasks into a sequence of LLM calls plus external tool invocations; stores transient ``memories''.
+  \item \textbf{Outside world} – OS, containers, other services.
+\end{itemize}
+
+For \textbf{observability purposes} the clean interface is usually the \emph{network boundary} (TLS write of a JSON inference request) and the system boundary (syscall / subprocess when the agent hits commands \verb|curl|, \verb|grep|).  Anything below those lines (GPU kernels, weight matrices, models) is model-inference serving territory; anything above is classic system observability tasks.  That’s why kernel-level eBPF can give you a neutral vantage: it straddles both worlds without needing library hooks.
+
+Traditional observability relies on \textbf{instrumentation}, but AI agents' dynamic internal logic changes (via prompts, instructions, reasoning, and tools) make instrumentation fragile. Shifting to \textbf{system-level boundaries} (kernel syscalls, TLS buffers, network sockets) achieves: 
+\begin{itemize}
+  \item \textbf{Framework neutrality}: Works across all agent runtimes 
+  \item \textbf{Semantic stability}: C aptures prompt-level semantics without chasing framework APIs.
+  \item \textbf{Trust \& auditability}: Independent trace that can’t be easily compromised by in-agent malware.
+  \item \textbf{Universal causal graph}: Merges agent-level semantics with OS-level events into one coherent story.
+\end{itemize}
+
+
+\section{Implementation and Challenge}
+
+We implement zero-instrumentation observability using \textbf{eBPF system-level tracing} to achieve framework-agnostic visibility  independent of the rapidly-evolving agent runtimes and frameworks. An LLM sidecar detects semantic anomalies (reasoning loops, contradictions, persona shifts) with system logs.
+
+The core challenge lies in the \textbf{semantic gap} between kernel-level signals and AI agent behaviors. While eBPF can capture comprehensive system-level data with minimal overhead, translating this into meaningful insights about agent performance requires sophisticated correlation techniques.
+Another challenge is capture all prompts and interactions with backend server is from encrypted TLS traffic. Most LLM serving are using TLS to communicate with backend server, and using SSE to stream the response. By using eBPF uprobe to hook the TLS read and write in userspace, we can capture the traffic and decrypt it.
+\end{document}
+
