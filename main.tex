@@ -23,7 +23,7 @@
 \newunicodechar{┘}{\symbol{"2518}} % 下右角
 \newunicodechar{─}{\symbol{"2500}} % 横线
 \newunicodechar{│}{\symbol{"2502}} % 竖线
-\newunicodechar{☁}{{\fontspec{Symbola}\symbol{"2601}}} % 云朵符号
+\newunicodechar{☁}{\textbf{[cloud]}} % 云朵符号 - using text replacement instead
 
 \begin{document}
 
@@ -35,7 +35,7 @@
 
 \sloppy
 \begin{abstract}
-AI agent systems exhibit non-deterministic, evolving behaviors that render traditional application monitoring inadequate, as they require semantic observability of reasoning traces, tool interactions, and emergent failures rather than low-level metrics. Current solutions relying on framework-specific instrumentation suffer from fragility against rapid agent evolution and security vulnerabilities like prompt injection. To address this, we propose boundary tracing—a zero-instrumentation approach using eBPF to capture semantics at kernel/network interfaces, decoupling observability from agent internals. This provides tamper-resistant, framework-agnostic visibility into prompt execution, cross-agent coordination, and critical failures, bridging the semantic gap between system events and AI logic for robust auditing and debugging.
+AI agent systems exhibit non-deterministic, evolving behaviors that render traditional application monitoring inadequate, as they require semantic observability of reasoning traces, tool interactions, and emergent failures rather than low-level metrics~\cite{wang2024survey}. Current solutions relying on framework-specific instrumentation suffer from fragility against rapid agent evolution and security vulnerabilities like prompt injection. To address this, we propose boundary tracing—a zero-instrumentation approach using eBPF to capture semantics at kernel/network interfaces, decoupling observability from agent internals. This provides tamper-resistant, framework-agnostic visibility into prompt execution, cross-agent coordination, and critical failures, bridging the semantic gap between system events and AI logic for robust auditing and debugging.
 \end{abstract}
 
 

@@ -1,0 +1,73 @@
+# LaTeX auxiliary files
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+main.pdf
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex.gz(busy)
+*.pdfsync
+*.nav
+*.snm
+*.vrb
+*.cut
+*.gz
+
+# Bibliography auxiliary files
+*.bcf
+*.run.xml
+
+# Build artifacts
+*.dvi
+*.ps
+*.eps
+
+# PDF output (comment out if you want to track PDFs)
+# *.pdf
+
+# Editor temporary files
+*~
+*.swp
+*.swo
+*.bak
+.DS_Store
+Thumbs.db
+
+# LaTeX project files
+*.prj
+*.tcp
+*.tps
+
+# Miscelaneous
+missfont.log
+*.xwm
+
+# TeX Maker
+*.synctex
+*.synctex.gz
+*.synctex.gz(busy)
+
+# WinEdt
+*.bak
+*.sav
+
+# Kile
+*.backup
+
+# auto folder when using emacs and auctex
+/auto/*
+
+# expex forward references with \gathertags
+*-tags.tex
+
+# standalone packages
+*.sta
+
+# generated if using elsarticle.cls
+*.spl
