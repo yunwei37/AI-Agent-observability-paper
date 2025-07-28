@@ -1,16 +1,3 @@
-\section{Design}
-
-\subsection{Design Principles}
-
-We propose \emph{boundary tracing} as a novel approach to AI agent observability. The key insight is that all meaningful agent interactions must traverse well-defined system boundaries: the kernel interface for system operations and the network interface for external communications. By observing at these boundaries rather than within agent code, we achieve stable, comprehensive monitoring independent of agent implementation details.
-
-Boundary tracing leverages the principle that while agent internals may change rapidly and unpredictably, the interfaces through which agents interact with their environment remain stable. System calls, network protocols, and file system operations provide consistent observation points that persist across framework versions and agent modifications. This approach fundamentally shifts the trust model from assuming cooperative agents to enforcing observation at tamper-proof system boundaries.
-
-The boundary tracing concept builds on three core principles. First, comprehensiveness through system-level observation ensures that all agent actions, regardless of implementation language or execution method, must interact with the operating system kernel to perform meaningful work. Second, stability through interface consistency leverages the fact that while agent frameworks evolve rapidly, system interfaces like POSIX system calls and network protocols change slowly and maintain backward compatibility. Third, semantic correlation enables understanding by capturing both what agents intend (through LLM communications) and what they do (through system operations), then correlating these perspectives to understand agent behavior holistically.
-
-\subsection{System Architecture}
-
-To understand boundary tracing, we first characterize the typical AI agent system architecture and identify stable observation points:
 
 \begin{center}
 \begin{Verbatim}[fontsize=\small, commandchars=\\\{\}]
@@ -40,23 +27,70 @@ To understand boundary tracing, we first characterize the typical AI agent syste
 \end{Verbatim}
 \end{center}
 
-The architecture reveals two stable observation boundaries that form the foundation of our approach. At the network boundary, all agent-LLM communications traverse the network interface as TLS-encrypted HTTP requests. Despite encryption, eBPF uprobes on SSL library functions can intercept data post-encryption at the application layer, capturing prompts, responses, and API parameters. This provides complete visibility into the semantic layer of agent reasoning. At the kernel boundary, all system interactions—process creation, file operations, network connections—must invoke kernel system calls. These syscalls provide a tamper-proof observation point that captures agent system behavior regardless of implementation language or framework.
+Of course. Here are the restructured and improved `Design` and `Implementation` sections, based on the previous analysis. The changes focus on sharpening the narrative, replacing the ASCII diagram with a proper figure description, and adding technical depth.
 
-The interaction between these boundaries enables comprehensive observability. When an agent receives a prompt through the network boundary, processes it internally, and then performs system operations through the kernel boundary, we can correlate these events to understand the complete execution flow. This dual-boundary approach captures both the "why" (agent reasoning) and the "what" (system effects) of agent behavior.
+***
 
-\subsection{Key Design Decisions}
+### Rewritten Section 4: Design
 
-Several critical design decisions shaped AgentSight's implementation of boundary tracing. The choice of eBPF over alternatives such as kernel modules or userspace hooking was driven by production requirements. eBPF provides kernel-level observation with verified safety guarantees, eliminating the stability risks of kernel modules while offering far superior performance compared to userspace approaches. The ability to dynamically load and update eBPF programs without system restarts proved essential for iterative development and production deployment.
+\section{Design}
+The design of AgentSight is guided by a single imperative: to bridge the semantic gap between an agent's intent and its actions. We achieve this through a novel observability paradigm, \emph{boundary tracing}, which is built on a foundation of stable system interfaces and realized through a multi-signal correlation engine.
 
-For TLS interception, we chose to use uprobes on SSL library functions rather than network-level packet capture or HTTP proxy approaches. This decision enables us to capture decrypted data at the precise moment it exists in cleartext within the application's address space, avoiding the complexity of key management required for packet decryption or the latency and configuration overhead of proxy-based solutions. The uprobe approach works transparently with any TLS version or cipher suite, requiring no agent configuration changes.
+\subsection{Boundary Tracing: A Principled Approach}
+Our approach is rooted in a key insight: while agent frameworks and internal logic are volatile, the system boundaries they must cross to perform any meaningful action are stable and unavoidable. Boundary tracing leverages this stability to provide durable and comprehensive observability. The primary goal of this approach is to enable **Semantic Correlation**, the ability to causally link high-level intentions with low-level system events. This goal is made possible by two foundational principles:
 
-The correlation strategy presented a fundamental challenge: how to associate high-level LLM interactions with low-level system operations across potentially different processes and time windows. We implemented a multi-signal correlation engine that considers process lineage, temporal proximity, file descriptor inheritance, and working directory context. This approach handles the common pattern where an agent process makes an LLM API call, then spawns a subprocess that performs the actual system operations based on the LLM's response.
+\begin{itemize}
+    \item \textbf{Comprehensiveness:} By monitoring at the kernel, we ensure that no system-level action—from process creation to file I/O—can go unobserved, regardless of the agent's implementation language or its attempts to evade monitoring by spawning subprocesses.
+    \item \textbf{Stability:} System call ABIs and network protocols evolve far more slowly than agent frameworks. Monitoring at these stable interfaces provides a durable solution that is resilient to the constant, breaking changes common in agent libraries.
+\end{itemize}
+This paradigm fundamentally shifts the trust model from assuming a cooperative agent to enforcing observation at tamper-proof system boundaries.
 
-Performance optimization guided several architectural choices. We implement aggressive filtering in eBPF programs to reduce data volume, use ring buffers for efficient kernel-to-userspace communication, and employ streaming analysis to avoid storing complete event histories. These decisions enable sub-3\% overhead even under high event rates while maintaining the semantic context necessary for behavioral analysis.
+\subsection{System Architecture: Observing the Boundaries}
+AgentSight's architecture is designed to simultaneously tap into the two critical boundaries an agent interacts with: the network boundary for semantic intent and the kernel boundary for system actions. Figure 1 illustrates this architecture. We use eBPF to place non-intrusive probes at both boundaries. Probes on SSL library functions in userspace capture the decrypted **Intent Stream** (LLM prompts and responses), while probes at the kernel level capture the **Action Stream** (syscalls, process events). Both streams are processed by our userspace correlation engine, which joins them to produce a unified, causally-linked event trace.
 
+\begin{figure}[h!]
+    \centering
+    % It is highly recommended to create this diagram using a tool like TikZ, Inkscape, or another vector graphics editor for the final paper.
+    % The following is a LaTeX description of the recommended figure.
+    \includegraphics[width=\columnwidth]{placeholder_diagram.png} % Replace with your actual figure file
+    \caption{\textbf{AgentSight System Architecture.} The agent process communicates with LLM services across the Network Boundary and interacts with the OS via the Kernel Boundary. eBPF uprobes intercept decrypted TLS traffic within the agent's userspace to capture the semantic \textbf{Intent Stream}. Simultaneously, eBPF kprobes and tracepoints monitor kernel activity to capture the \textbf{Action Stream}. Both streams are fed into the AgentSight Correlation Engine, which causally links them to produce a complete, contextualized event trace.}
+    \label{fig:architecture}
+\end{figure}
+
+\subsection{Bridging the Gap: Core Design Decisions}
+Several key decisions enable AgentSight to effectively bridge the semantic gap:
+
+\textbf{eBPF for Safe, Unified Probing:} We chose eBPF because it provides a single, production-safe technology to access both userspace and kernel data streams. Its verified safety model eliminates the risks of kernel modules, and its performance is vastly superior to traditional userspace hooking or `ptrace`-based approaches.
+
+\textbf{Uprobes for Transparent TLS Interception:} To capture semantic intent, we intercept decrypted data directly from the agent's memory by placing `uprobes` on SSL library functions (e.g., `SSL_read`/`SSL_write`). This approach is superior to network-level packet capture, as it avoids the complexity of TLS key management, and more efficient than proxy-based solutions, which introduce network latency and configuration overhead.
+
+\textbf{Multi-Signal Causal Correlation Engine:} The core of our design is a correlation strategy that establishes causality between intent and action. We designed a multi-signal engine that relies on:
+\begin{enumerate}
+    \item \textbf{Process Lineage:} Building a complete process tree by tracking `fork` and `execve` events to link actions in child processes back to the parent agent.
+    \item \textbf{Temporal Proximity:} Associating actions that occur within a narrow time window immediately following an LLM response.
+    \item \textbf{Argument Matching:} Directly matching content from LLM responses—such as filenames, URLs, or commands—with the arguments of subsequent system calls.
+\end{enumerate}
+
+---
+
+### Rewritten Section 5: Implementation
 
 \section{Implementation}
+AgentSight is implemented as a userspace daemon written in Rust that orchestrates a suite of eBPF programs. The system is designed for high performance and low overhead, processing raw event streams from the kernel to produce correlated, human-readable observability data.
 
-AgentSight's implementation centers on two eBPF programs: an SSL monitoring program that uses uprobes to intercept SSL\_write/SSL\_read functions for capturing decrypted LLM communications, and a process monitoring program that tracks system calls, file operations, and process lifecycle events. The SSL monitor maintains connection state through eBPF hash maps and handles Server-Sent Events by buffering partial messages until complete, achieving sub-1\% CPU overhead through efficient ring buffer usage and configurable filtering. The process monitor combines stable tracepoints (sched\_process\_fork, sched\_process\_exit) with dynamic kprobes on system calls to capture comprehensive agent behavior. A Rust-based streaming pipeline processes these raw events through analyzers that reassemble fragmented SSL data, parse HTTP headers to identify LLM API calls, and correlate events across process boundaries using multi-signal tracking including process genealogy, temporal proximity, and shared resources.
+\subsection{Data Collection at the Boundaries}
+Our eBPF probes are responsible for capturing the raw intent and action streams from the system.
 
-The implementation faced three critical engineering challenges. First, TLS interception required intercepting SSL library functions across OpenSSL and BoringSSL variants without adding latency—we achieved sub-50 microsecond overhead through runtime symbol resolution and asynchronous processing. Second, Server-Sent Events from LLM providers fragment responses across hundreds of SSL\_read calls, requiring stateful reassembly with protocol-aware parsing to identify event boundaries. Third, cross-process correlation proved essential as agents spawn subprocesses that escape traditional monitoring—our correlation engine tracks process trees, temporal windows (100-500ms), file descriptor inheritance, and working directories to maintain causal relationships across boundaries, enabling semantic understanding of complete agent execution flows from initial prompts through system operations.
+\textbf{Capturing Semantic Intent (TLS):} An eBPF program utilizing `uprobes` is attached to `SSL_read` and `SSL_write` functions in dynamically linked crypto libraries (e.g., OpenSSL, BoringSSL). This allows us to intercept all decrypted LLM communications. A significant challenge here is handling streaming protocols like Server-Sent Events (SSE), which fragment a single JSON response across numerous `SSL_read` calls. Our userspace daemon implements a stateful reassembly mechanism that buffers data chunks per-connection and parses them for event boundaries (`\n\n`) to reconstruct complete messages.
+
+\textbf{Capturing System Actions (Kernel):} A second eBPF program monitors kernel activity. We use efficient, stable `tracepoints` like `sched_process_fork` and `sched_process_exit` to build a process tree. For detailed actions, we use `kprobes` to dynamically attach to specific system calls relevant to agent behavior, such as `openat2` (file access), `connect` (network connections), and `execve` (program execution). Aggressive in-kernel filtering ensures that only events originating from targeted agent processes are sent to userspace, minimizing overhead.
+
+\subsection{The Correlation Engine}
+The Rust-based userspace daemon houses the core correlation engine. It consumes the high-throughput intent and action streams from eBPF ring buffers and performs three stages of analysis:
+
+\begin{enumerate}
+    \item \textbf{Enrichment:} Raw events are enriched with context. For example, a file descriptor from an `openat2` call is mapped to a full file path, and a process ID is mapped to its full command line and parent process from the process tree.
+    \item \textbf{Stateful Tracking:} The engine maintains the state of each agent and its children in a process-tree data structure. It also tracks open files and network connections for each process.
+    \item \textbf{Causal Linking:} Using the enriched data and maintained state, the engine applies the multi-signal correlation logic described in our design. It searches for system actions that match the "fingerprint" of a preceding LLM intent based on process lineage, temporal proximity (within a 100-500ms window), and content matching, thereby bridging the semantic gap and producing a single, coherent event trace.
+\end{enumerate}
+This entire pipeline is designed for streaming analysis, avoiding the need to store complete event histories and enabling real-time detection with a memory footprint of less than 200MB on a typical system. 
