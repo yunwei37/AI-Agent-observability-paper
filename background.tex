@@ -6,43 +6,22 @@ AI agents represent a new class of software systems that combine language models
 
 The key characteristic distinguishing AI agents from traditional software is their ability to dynamically construct execution plans based on natural language objectives. An agent tasked with "analyze this dataset" might autonomously decide to install packages, write analysis scripts, execute them, and interpret results—all without predetermined logic paths. This flexibility comes from the LLM's ability to generate arbitrary code and command sequences.
 
+\subsection{The Observability Challenge: A Departure from Traditional Software}
+
+The autonomy of AI agents creates unprecedented observability challenges. Traditional Application Performance Monitoring (APM) assumes deterministic software with predefined execution paths that can be instrumented at development time. AI agents violate this assumption in three fundamental ways:
+
+\textbf{Dynamic Execution Paths:} An agent's sequence of operations emerges from LLM reasoning, not static code. The same task may be solved differently on each run, making it impossible to instrument all potential logic paths in advance.
+
+\textbf{Cross-Boundary Interactions:} Agents frequently use tools to spawn subprocesses (\texttt{bash}, \texttt{python}), execute shell commands (\texttt{curl}, \texttt{git}), or interact with the filesystem. These actions escape the monitoring scope of their parent process, rendering traditional, process-scoped instrumentation blind.
+
+\textbf{The Semantic Gap:} A series of low-level system calls—like file reads and writes—is meaningless without context. Understanding whether these operations constitute benign data analysis or malicious exfiltration requires correlating them with the agent's high-level intent, which is locked within its LLM interactions.
+
+These fundamental differences demand a new approach to observability that can capture both the "why" (agent reasoning) and the "what" (system effects) of agent behavior.
+
 \subsection{eBPF Technical Foundation}
 
-eBPF (extended Berkeley Packet Filter) represents a fundamental advancement in kernel programmability, enabling safe execution of custom programs within the Linux kernel without modifying kernel source code or loading kernel modules~\cite{brendangregg}. Originally developed for packet filtering, eBPF has evolved into a general-purpose in-kernel virtual machine that powers modern observability, networking, and security tools~\cite{ebpfio,cilium}. For AI agent observability, eBPF provides unique capabilities that traditional monitoring approaches cannot match. It enables observation at the exact boundaries where agents interact with the system—capturing both high-level semantic information through TLS interception and low-level system behavior through syscall monitoring with minimal performance impact.
+eBPF (extended Berkeley Packet Filter) represents a fundamental advancement in kernel programmability, enabling safe execution of custom programs within the Linux kernel without modifying kernel source code or loading kernel modules~\cite{brendangregg}. Originally developed for packet filtering, eBPF has evolved into a general-purpose in-kernel virtual machine that powers modern observability, networking, and security tools~\cite{ebpfio,cilium}. 
+
+For AI agent observability, eBPF provides unique capabilities that traditional monitoring approaches cannot match. It enables observation at the exact boundaries where agents interact with the system—capturing both high-level semantic information through TLS interception and low-level system behavior through syscall monitoring with minimal performance impact.
 
 The eBPF safety model is crucial for production deployment. The kernel verifier performs exhaustive analysis of eBPF programs before loading, ensuring memory safety through bounds-checked pointer arithmetic, proving program termination by prohibiting unbounded loops, enforcing resource limits on stack usage and execution time, and enabling type safety through BTF (BPF Type Format) for kernel version compatibility~\cite{kerneldoc}. These guarantees allow eBPF programs to run safely in production environments handling critical workloads.
-
-\subsection{Current Observability Approaches}
-
-Traditional software observability relies on Application Performance Monitoring (APM) tools that instrument code to collect metrics, logs, and traces. These tools excel at monitoring deterministic software with well-defined execution paths. However, they assume cooperative behavior from the monitored application and require explicit instrumentation points. For conventional web applications or microservices, this model works well because developers control the codebase and can add instrumentation where needed.
-
-The emergence of AI agents challenges every assumption underlying traditional observability. Agents generate code dynamically, execute arbitrary commands, spawn subprocesses that escape monitoring scope, and can potentially disable or circumvent instrumentation. Current APM tools lack the semantic understanding necessary to interpret agent behaviors, cannot maintain visibility across process boundaries, and require constant updates to keep pace with rapidly evolving agent frameworks.
-
-\subsection{Current AI Observability Solutions}
-
-% \begin{table*}[t]
-% \caption{Landscape of AI Agent Observability Solutions}
-% \label{tab:landscape}
-% \centering
-% \scriptsize
-% \begin{tabular}{p{0.3cm} p{2.2cm} p{2.5cm} p{2.8cm} p{1.5cm} p{2.2cm}}
-% \toprule
-% \# & Tool / SDK (year) & Integration path & What it gives you & License / model & Notes \\
-% \midrule
-% 1 & \textbf{LangSmith} (2023)~\cite{langsmith} & Add \texttt{import langsmith} to any LangChain / LangGraph app & Request/response traces, prompt \& token stats, built-in evaluation jobs & SaaS, free tier & Tightest integration with LangChain; OTel export in beta \\
-% 2 & \textbf{Helicone} (2023)~\cite{helicone} & Drop-in reverse-proxy or Python/JS SDK & Logs every OpenAI-style HTTP call; live cost \& latency dashboards; "smart" model routing & OSS core (MIT) + hosted & Proxy model keeps app code unchanged \\
-% 3 & \textbf{Traceloop} (2024)~\cite{traceloop} & One-line AI-SDK import → OTel & Full OTel spans for prompts, tools, sub-calls; replay \& A/B test flows & SaaS, generous free tier & Uses standard OTel data; works with any backend \\
-% 4 & \textbf{Arize Phoenix} (2024)~\cite{phoenix} & \texttt{pip install arize-phoenix}; OpenInference tracer & Local UI + vector-store for traces; automatic evals (toxicity, relevance) with another LLM & Apache-2.0, self-host or cloud & Ships its own open-source UI; good for offline debugging \\
-% 5 & \textbf{Langfuse} (2024)~\cite{langfuse} & Langfuse SDK \emph{or} send raw OTel OTLP & Nested traces, cost metrics, prompt mgmt, evals; self-host in Docker & OSS (MIT) + cloud & Popular in RAG / multi-agent projects; OTLP endpoint keeps you vendor-neutral \\
-% 6 & \textbf{WhyLabs LangKit} (2023)~\cite{whylabs} & Wrapper that extracts text metrics & Drift, toxicity, sentiment, PII flags; sends to WhyLabs platform & Apache-2.0 core, paid cloud & Adds HEAVY text-quality metrics rather than request tracing \\
-% 7 & \textbf{PromptLayer} (2022)~\cite{promptlayer} & Decorator / context-manager or proxy & Timeline view of prompt chains; diff \& replay; built on OTel spans & SaaS & Early mover; minimal code changes but not open source \\
-% 8 & \textbf{Literal AI} (2024)~\cite{literalai} & Python SDK + UI & RAG-aware traces, eval experiments, datasets & OSS core + SaaS & Aimed at product teams shipping chatbots \\
-% 9 & \textbf{W\&B Weave / Traces} (2024)~\cite{wandb} & \texttt{import weave} or W\&B SDK & Deep link into existing W\&B projects; captures code, inputs, outputs, user feedback & SaaS & Nice if you already use W\&B for ML experiments \\
-% 10 & \textbf{Honeycomb Gen-AI views} (2024)~\cite{honeycomb} & Send OTel spans; Honeycomb UI & Heat-map + BubbleUp on prompt spans, latency, errors & SaaS & Built atop Honeycomb's mature trace store; no eval layer \\
-% 11 & \textbf{OpenTelemetry GenAI semantic-conventions} (2024)~\cite{semconv} & Spec + contrib Python lib (\texttt{opentelemetry-instrumentation-openai}) & Standard span/metric names for models, agents, prompts & Apache-2.0 & Gives you a lingua-franca; several tools above emit it \\
-% 12 & \textbf{OpenInference spec} (2023)~\cite{openinference} & Tracer wrapper (supports LangChain, LlamaIndex, Autogen…) & JSON schema for traces + plug-ins; Phoenix uses it & Apache-2.0 & Spec, not a hosted service; pairs well with any OTel backend \\
-% \bottomrule
-% \end{tabular}
-% \end{table*}
-
-Current AI agent observability solutions fall into three categories: SDK-based instrumentation (LangSmith~\cite{langsmith}, Langfuse~\cite{langfuse}), proxy-based interception (Helicone~\cite{helicone}, PromptLayer~\cite{promptlayer}), and system-level monitoring tools (Falco~\cite{falco}, Tracee~\cite{tracee}). SDK approaches require code modification and suffer from tight coupling to rapidly evolving agent frameworks—LangChain averaged multiple breaking changes per month in 2024—forcing constant maintenance. Proxy solutions avoid code changes but capture only LLM interactions, missing critical local activities like subprocess spawning and file operations. System-level tools provide comprehensive visibility but lack AI-specific semantic understanding, unable to correlate low-level operations with agent reasoning. All existing solutions face fundamental limitations: they operate within application boundaries missing cross-process activities, assume cooperative agents that faithfully report their behavior (failing against prompt injection or compromised agents), and cannot bridge the semantic gap between system operations and agent intentions. These gaps motivate our boundary tracing approach that observes at stable kernel and network interfaces, capturing complete agent behavior while remaining resilient to framework changes and adversarial agents.
