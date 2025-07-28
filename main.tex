@@ -550,41 +550,7 @@ While AgentSight demonstrates the feasibility of boundary tracing for AI agent o
 
 \section{Conclusion}
 
-The emergence of AI agents as autonomous software entities fundamentally transforms the observability landscape. These systems—capable of independent reasoning, dynamic code generation, and self-directed tool use—operate beyond the boundaries of traditional monitoring approaches. Our work on AgentSight arose from a simple yet profound observation: agents behave more like users than programs, requiring observability solutions that match this paradigm shift.
-
-Through the development and deployment of AgentSight, we validated boundary tracing as a practical approach to AI agent observability. By positioning observation points at system boundaries—the kernel interface for system operations and the network interface for LLM communications—we achieved comprehensive visibility that remains stable despite the rapid evolution of agent frameworks. This approach transcends the limitations of application-level instrumentation, capturing the full scope of agent activities including subprocess spawning, tool invocation, and cross-process coordination.
-
-Our implementation demonstrates several critical achievements:
-
-\textbf{Technical Feasibility}: Despite initial skepticism about system-level monitoring overhead, careful engineering achieved sub-3\% performance impact in production workloads. The combination of eBPF's in-kernel processing, intelligent filtering, and efficient data structures proves that comprehensive monitoring need not compromise system performance. This efficiency makes AgentSight practical for production deployments without dedicated monitoring infrastructure.
-
-\textbf{Semantic Bridge}: The dual-perspective approach—correlating high-level LLM interactions with low-level system operations—successfully bridges the semantic gap that plagued previous monitoring attempts. When an agent discusses "analyzing customer data" in its prompts, then reads specific database files, the correlation provides context that neither perspective alone could offer. This semantic understanding enables distinction between legitimate operations and potential security threats.
-
-\textbf{Framework Agnosticism}: During our evaluation period, major agent frameworks underwent dozens of breaking changes. AgentSight continued functioning without modification, validating our hypothesis that system-level interfaces provide stability in a rapidly evolving ecosystem. This independence from framework internals ensures longevity and broad applicability.
-
-\textbf{Security Insights}: Our case studies revealed concerning security patterns in production agent deployments. The ability to detect prompt injection attacks, reasoning loops, and coordination failures demonstrates that comprehensive observability serves not just operational needs but fundamental safety requirements. The correlation between agent intentions and system effects enables detection of subtle attacks that would escape traditional monitoring.
-
-Yet our work also illuminates significant challenges ahead:
-
-\textbf{The Semantic Interpretation Challenge}: While we can capture and correlate events, automatically interpreting their meaning remains difficult. Determining whether a sequence of file operations represents legitimate data processing or malicious exfiltration requires context that current systems struggle to provide automatically. Future work must develop more sophisticated semantic analysis capabilities.
-
-\textbf{Privacy-Security Tension}: Comprehensive monitoring inherently conflicts with privacy requirements. Capturing all LLM interactions and system operations creates rich datasets that could expose sensitive information. The field needs privacy-preserving monitoring techniques that maintain security visibility while protecting confidential data.
-
-\textbf{Standardization Imperative}: The proliferation of agent frameworks without common observability standards fragments the ecosystem. Each framework's proprietary formats and protocols prevent interoperability and hinder collective safety efforts. Industry-wide standards for agent telemetry, correlation protocols, and behavioral baselines are urgently needed.
-
-\textbf{Scale and Distribution}: As agents evolve from single-machine deployments to distributed swarms, maintaining unified observability becomes exponentially complex. Correlation across machines, data centers, and cloud providers requires new distributed tracing primitives designed for agent-specific communication patterns.
-
-We release AgentSight as open source not as a complete solution but as a foundation for community collaboration. The challenges of AI agent observability exceed any single organization's capacity. By sharing our implementation, evaluation data, and architectural insights, we aim to accelerate collective progress toward safe and observable AI agent deployments.
-
-The trajectory is clear: AI agents will assume increasing autonomy and responsibility in critical systems. Financial trading agents, healthcare diagnostic assistants, infrastructure management systems—all demand robust observability infrastructure. The gap between agent capabilities and monitoring infrastructure represents a critical risk that grows with each deployment.
-
-Our vision extends beyond technical monitoring to enabling a new relationship between humans and AI agents. Comprehensive observability allows us to trust but verify—granting agents autonomy while maintaining visibility into their actions. This balance enables the beneficial deployment of AI agents while mitigating risks through systematic observation.
-
-As we stand at the threshold of an agent-powered future, the importance of observability cannot be overstated. Just as the rise of microservices drove innovations in distributed tracing, the emergence of AI agents demands corresponding advances in observability infrastructure. AgentSight represents an early step in this journey, demonstrating both the feasibility and necessity of system-level agent monitoring.
-
-We invite the community—researchers, practitioners, and organizations deploying AI agents—to build upon this foundation. Whether through new analysis techniques, privacy-preserving methods, standardization efforts, or novel applications, collaborative advancement is essential. The rapid evolution of AI capabilities must be matched by equally rapid innovation in observability infrastructure.
-
-The future of software is autonomous, adaptive, and intelligent. Ensuring this future is also safe, transparent, and trustworthy requires foundational advances in how we observe and understand AI agent behavior. AgentSight contributes to this foundation, but the work has only begun.
+AI agents fundamentally transform observability through their autonomous reasoning and dynamic code generation. AgentSight validates boundary tracing—monitoring at kernel and network interfaces rather than within application code—achieving <3\% overhead while maintaining framework-agnostic visibility across dozens of breaking changes. Our implementation successfully bridges the semantic gap between high-level LLM interactions and low-level system operations, detecting prompt injection attacks and reasoning loops in production. Critical challenges remain: semantic interpretation, privacy-preserving monitoring, standardization, and distributed agent correlation. We release AgentSight as open source to catalyze community collaboration on these pressing infrastructure challenges. As agents assume control in critical systems, the gap between their capabilities and our monitoring infrastructure represents a growing risk—AgentSight provides an essential foundation for the safe, transparent deployment of autonomous AI systems.
 
 \textbf{Repository}: \url{https://github.com/eunomia-bpf/agentsight}
 
