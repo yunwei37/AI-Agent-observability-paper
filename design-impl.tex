@@ -1,0 +1,118 @@
+\section{Design}
+
+\subsection{Design Principles}
+
+We propose \emph{boundary tracing} as a novel approach to AI agent observability. The key insight is that all meaningful agent interactions must traverse well-defined system boundaries: the kernel interface for system operations and the network interface for external communications. By observing at these boundaries rather than within agent code, we achieve stable, comprehensive monitoring independent of agent implementation details.
+
+Boundary tracing leverages the principle that while agent internals may change rapidly and unpredictably, the interfaces through which agents interact with their environment remain stable. System calls, network protocols, and file system operations provide consistent observation points that persist across framework versions and agent modifications. This approach fundamentally shifts the trust model from assuming cooperative agents to enforcing observation at tamper-proof system boundaries.
+
+The boundary tracing concept builds on three core principles. First, comprehensiveness through system-level observation ensures that all agent actions, regardless of implementation language or execution method, must interact with the operating system kernel to perform meaningful work. Second, stability through interface consistency leverages the fact that while agent frameworks evolve rapidly, system interfaces like POSIX system calls and network protocols change slowly and maintain backward compatibility. Third, semantic correlation enables understanding by capturing both what agents intend (through LLM communications) and what they do (through system operations), then correlating these perspectives to understand agent behavior holistically.
+
+\subsection{System Architecture}
+
+To understand boundary tracing, we first characterize the typical AI agent system architecture and identify stable observation points:
+
+\begin{center}
+\begin{Verbatim}[fontsize=\small, commandchars=\\\{\}]
+┌─────────────────────────────────────────────────┐
+│             System Environment                  │
+│  (Operating System, Containers, Services)       │
+│                                                 │
+│  ┌─────────────────────────────────────────┐   │
+│  │      Agent Runtime Framework            │   │  ← Application Layer
+│  │   (LangChain, AutoGen, Claude Code)     │   │
+│  │   • Prompt orchestration                │   │
+│  │   • Tool execution logic                │   │
+│  │   • State management                    │   │
+│  └─────────────────────────────────────────┘   │
+│                    ↕                            │
+│  ═══════════════════════════════════════════   │  ← Network Boundary
+│           (TLS-encrypted traffic)               │     (Observable)
+│                    ↕                            │
+│  ┌─────────────────────────────────────────┐   │
+│  │         LLM Service Provider            │   │
+│  │    (OpenAI API, Local Models)           │   │
+│  └─────────────────────────────────────────┘   │
+│                                                 │
+│  ═══════════════════════════════════════════   │  ← Kernel Boundary
+│         (System calls, File I/O)                │     (Observable)
+└─────────────────────────────────────────────────┘
+\end{Verbatim}
+\end{center}
+
+The architecture reveals two stable observation boundaries that form the foundation of our approach. At the network boundary, all agent-LLM communications traverse the network interface as TLS-encrypted HTTP requests. Despite encryption, eBPF uprobes on SSL library functions can intercept data post-encryption at the application layer, capturing prompts, responses, and API parameters. This provides complete visibility into the semantic layer of agent reasoning. At the kernel boundary, all system interactions—process creation, file operations, network connections—must invoke kernel system calls. These syscalls provide a tamper-proof observation point that captures agent system behavior regardless of implementation language or framework.
+
+The interaction between these boundaries enables comprehensive observability. When an agent receives a prompt through the network boundary, processes it internally, and then performs system operations through the kernel boundary, we can correlate these events to understand the complete execution flow. This dual-boundary approach captures both the "why" (agent reasoning) and the "what" (system effects) of agent behavior.
+
+\subsection{Key Design Decisions}
+
+Several critical design decisions shaped AgentSight's implementation of boundary tracing. The choice of eBPF over alternatives such as kernel modules or userspace hooking was driven by production requirements. eBPF provides kernel-level observation with verified safety guarantees, eliminating the stability risks of kernel modules while offering far superior performance compared to userspace approaches. The ability to dynamically load and update eBPF programs without system restarts proved essential for iterative development and production deployment.
+
+For TLS interception, we chose to use uprobes on SSL library functions rather than network-level packet capture or HTTP proxy approaches. This decision enables us to capture decrypted data at the precise moment it exists in cleartext within the application's address space, avoiding the complexity of key management required for packet decryption or the latency and configuration overhead of proxy-based solutions. The uprobe approach works transparently with any TLS version or cipher suite, requiring no agent configuration changes.
+
+The correlation strategy presented a fundamental challenge: how to associate high-level LLM interactions with low-level system operations across potentially different processes and time windows. We implemented a multi-signal correlation engine that considers process lineage, temporal proximity, file descriptor inheritance, and working directory context. This approach handles the common pattern where an agent process makes an LLM API call, then spawns a subprocess that performs the actual system operations based on the LLM's response.
+
+Performance optimization guided several architectural choices. We implement aggressive filtering in eBPF programs to reduce data volume, use ring buffers for efficient kernel-to-userspace communication, and employ streaming analysis to avoid storing complete event histories. These decisions enable sub-3\% overhead even under high event rates while maintaining the semantic context necessary for behavioral analysis.
+
+
+\section{Implementation}
+
+\subsection{eBPF Programs}
+
+AgentSight's implementation centers on two eBPF programs that observe system boundaries to capture comprehensive agent behavior. These programs leverage different eBPF mechanisms to intercept both semantic information from LLM communications and system-level operations from kernel interactions.
+
+\subsubsection{SSL/TLS Monitoring Implementation}
+
+The SSL monitoring program (sslsniff.bpf.c) uses uprobes to intercept SSL library functions, capturing decrypted application data at the precise moment it exists in cleartext. The implementation defines a comprehensive event structure containing nanosecond timestamps for precise correlation, process and thread identifiers for tracking execution context, command names for process identification, data payload with configurable maximum size, and handshake status to track connection lifecycle. The program attaches to three critical SSL functions: SSL\_write captures outgoing data including agent prompts and API requests, SSL\_read intercepts incoming responses including streaming LLM outputs, and SSL\_do\_handshake tracks connection establishment for session correlation.
+
+The program maintains connection state through eBPF hash maps to correlate read/write operations belonging to the same session. This state management proves essential for reconstructing complete LLM conversations from fragmented network traffic. Special handling for Server-Sent Events (SSE) addresses the challenge of streaming responses where data arrives in multiple chunks. The implementation buffers partial SSE messages until complete events can be extracted, enabling accurate capture of streaming LLM outputs that many modern providers use for real-time response delivery.
+
+Performance optimizations include configurable filtering by process name or PID to reduce data volume, efficient ring buffer usage with backpressure handling, and minimal overhead probe implementations that extract only essential data. These optimizations ensure the SSL monitoring maintains sub-1\% CPU overhead even during high-frequency LLM interactions.
+
+\subsubsection{Process Monitoring Implementation}
+
+The process monitoring program (process.bpf.c) provides comprehensive visibility into system-level agent activities through strategic kernel instrumentation. The program tracks multiple event types that reveal agent behavior patterns: process lifecycle events including execution, fork, and exit operations that show how agents spawn tools and subprocesses; file system operations including opens, writes, and deletions that reveal data manipulation and persistence patterns; and network activities including connection establishment and data transfer that expose external communications beyond LLM APIs.
+
+Each captured event contains rich contextual information essential for behavioral analysis. The event structure includes event type classification for rapid filtering, nanosecond-precision timestamps enabling accurate correlation with LLM interactions, complete process genealogy through PID and PPID tracking, file paths and access modes revealing data access patterns, and process exit codes indicating success or failure states. This comprehensive metadata enables reconstruction of complex agent behaviors from low-level system events.
+
+The implementation leverages both stable tracepoints and dynamic kprobes for maximum coverage with minimal overhead. Tracepoints such as sched\_process\_fork and sched\_process\_exit provide reliable process lifecycle monitoring, while kprobes on system calls like sys\_open and sys\_connect capture file and network operations. This hybrid approach balances stability with comprehensive coverage, ensuring AgentSight captures all relevant agent activities regardless of how they're initiated.
+
+\subsection{Event Processing Pipeline}
+
+The Rust-based streaming framework transforms raw eBPF events into meaningful behavioral insights through a sophisticated processing pipeline. This architecture addresses the challenge of handling high-volume, heterogeneous event streams while maintaining the semantic context necessary for understanding agent behavior.
+
+\subsubsection{Streaming Architecture}
+
+The framework implements an asynchronous, multi-stage pipeline that processes events in real-time without requiring complete event histories. The Runner abstraction executes eBPF programs and converts their JSON output into strongly-typed event streams. Each runner implementation manages configuration including process filters, event type selection, and sampling rates. The asynchronous tokio-based architecture enables concurrent execution of multiple eBPF programs while maintaining strict event ordering through timestamp-based sequencing.
+
+Event flow through the pipeline follows a carefully designed path. Raw events from eBPF programs enter through runners that perform initial parsing and validation. Events then flow through a chain of analyzers that progressively enhance and correlate the data. Finally, processed events reach output handlers that can write to files, stream to web clients, or feed into external analysis systems. This modular design allows easy extension with new processing stages without modifying existing components.
+
+\subsubsection{Semantic Analysis Components}
+
+The analyzer chain implements sophisticated processing logic to extract meaning from raw events. ChunkMerger addresses the challenge of fragmented SSL data by maintaining per-connection buffers that reassemble complete messages from packet fragments. This component proves essential for reconstructing LLM interactions from Server-Sent Events where responses arrive across multiple SSL\_read calls. The merger identifies SSE boundaries, buffers partial messages, and emits complete events once fully assembled.
+
+HTTPFilter provides protocol-aware analysis of captured network traffic. Beyond simple filtering, it parses HTTP headers to extract API endpoints, authentication tokens, and request parameters. The filter applies configurable rules to identify LLM API calls versus other HTTP traffic, extract model parameters from headers, and flag suspicious patterns such as unusual API endpoints or missing authentication. This semantic understanding transforms raw network data into actionable intelligence about agent behavior.
+
+The correlation engine represents the framework's most sophisticated component, implementing multi-signal correlation to link related events across time and process boundaries. The engine maintains sliding windows of recent events indexed by process ID, timestamp, and resource identifiers. When new events arrive, the engine searches for related activities using parent-child process relationships, temporal proximity within configurable windows, shared file descriptors indicating inherited resources, and common working directories suggesting related operations. This correlation reveals causal chains from LLM prompts through system operations, enabling semantic understanding of agent behavior.
+
+\subsection{Engineering Challenges}
+
+Implementing boundary tracing for production AI agent monitoring presented several significant engineering challenges that required novel solutions.
+
+\subsubsection{TLS Interception at Scale}
+
+Intercepting TLS-encrypted LLM communications without introducing latency or stability issues required careful engineering. Traditional approaches like packet capture cannot decrypt TLS traffic without private keys, while HTTP proxies add configuration complexity and latency. Our solution leverages eBPF uprobes on SSL library functions to intercept data at the application layer after decryption but before transmission.
+
+The implementation attaches probes to SSL\_write and SSL\_read functions across multiple SSL library versions, handling both OpenSSL and BoringSSL variants common in production environments. The challenge of library version compatibility was addressed through runtime symbol resolution and flexible probe attachment. Performance optimization proved critical—naive implementations added 5-10ms latency to API calls. Through careful buffer management and asynchronous processing, we reduced probe overhead to under 50 microseconds per call, negligible compared to typical LLM API latencies of 500-2000ms.
+
+\subsubsection{Server-Sent Events Reassembly}
+
+Modern LLM providers increasingly use Server-Sent Events for streaming responses, which fragments data across multiple SSL\_read calls. Unlike traditional HTTP responses that arrive in a single buffer, SSE streams can span hundreds of read operations for a single LLM response. This fragmentation breaks naive SSL interception approaches that assume complete messages in single operations.
+
+Our ChunkMerger component maintains per-connection state to reassemble fragmented streams. The implementation identifies SSE boundaries through protocol-aware parsing, looking for the double-newline sequences that delimit events. Partial events are buffered with careful memory management to prevent unbounded growth from malformed streams. The merger handles edge cases including events split across multiple reads, chunked transfer encoding interactions, and connection resets during streaming. This component proves essential for capturing complete LLM responses, particularly for long-form content generation where responses may stream for several seconds.
+
+\subsubsection{Cross-Process Correlation}
+
+AI agents routinely spawn subprocesses to execute tools, creating correlation challenges across process boundaries. A single agent action might involve an LLM API call in the parent process followed by tool execution in multiple child processes. Traditional process-scoped monitoring loses these relationships, making it impossible to understand the complete execution flow.
+
+Our correlation engine addresses this through multi-signal tracking. Process genealogy is maintained through fork event monitoring, creating a complete process tree for each agent session. Temporal correlation windows group events occurring within configurable time bounds, typically 100-500ms for local operations. File descriptor inheritance tracking reveals shared resources between parent and child processes. Working directory analysis identifies processes operating on the same data. These signals combine through a weighted scoring algorithm that identifies related events with high confidence while minimizing false correlations from unrelated system activity.

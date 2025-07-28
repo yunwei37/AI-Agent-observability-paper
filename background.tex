@@ -1,0 +1,144 @@
+\section{Background, Motivation, and Related Work}
+
+\subsection{Background}
+
+\subsubsection{AI Agent Architecture}
+
+AI agents represent a new class of software systems that combine language models with environmental interactions. These systems typically consist of three core components: (1) an LLM backend that provides reasoning capabilities, (2) a tool execution framework that enables system interactions, and (3) a control loop that orchestrates prompts, tool calls, and state management. Popular frameworks such as LangChain~\cite{langchain}, AutoGen~\cite{autogen}, and Claude Code implement variations of this architecture.
+
+The key characteristic distinguishing AI agents from traditional software is their ability to dynamically construct execution plans based on natural language objectives. An agent tasked with "analyze this dataset" might autonomously decide to install packages, write analysis scripts, execute them, and interpret results—all without predetermined logic paths. This flexibility comes from the LLM's ability to generate arbitrary code and command sequences.
+
+\subsubsection{eBPF Technical Foundation}
+
+eBPF (extended Berkeley Packet Filter) represents a fundamental advancement in kernel programmability, enabling safe execution of custom programs within the Linux kernel without modifying kernel source code or loading kernel modules~\cite{brendangregg}. Originally developed for packet filtering, eBPF has evolved into a general-purpose in-kernel virtual machine that powers modern observability, networking, and security tools~\cite{ebpfio,cilium}. For AI agent observability, eBPF provides unique capabilities that traditional monitoring approaches cannot match. It enables observation at the exact boundaries where agents interact with the system—capturing both high-level semantic information through TLS interception and low-level system behavior through syscall monitoring with minimal performance impact.
+
+The eBPF safety model is crucial for production deployment. The kernel verifier performs exhaustive analysis of eBPF programs before loading, ensuring memory safety through bounds-checked pointer arithmetic, proving program termination by prohibiting unbounded loops, enforcing resource limits on stack usage and execution time, and enabling type safety through BTF (BPF Type Format) for kernel version compatibility~\cite{kerneldoc}. These guarantees allow eBPF programs to run safely in production environments handling critical workloads.
+
+\subsubsection{Current Observability Approaches}
+
+Traditional software observability relies on Application Performance Monitoring (APM) tools that instrument code to collect metrics, logs, and traces. These tools excel at monitoring deterministic software with well-defined execution paths. However, they assume cooperative behavior from the monitored application and require explicit instrumentation points. For conventional web applications or microservices, this model works well because developers control the codebase and can add instrumentation where needed.
+
+The emergence of AI agents challenges every assumption underlying traditional observability. Agents generate code dynamically, execute arbitrary commands, spawn subprocesses that escape monitoring scope, and can potentially disable or circumvent instrumentation. Current APM tools lack the semantic understanding necessary to interpret agent behaviors, cannot maintain visibility across process boundaries, and require constant updates to keep pace with rapidly evolving agent frameworks.
+
+\subsection{Motivation and Problem Statement}
+
+Observing AI agent behavior presents unique technical challenges that existing monitoring approaches fail to address. Traditional software observability assumes deterministic execution flows that can be instrumented at development time. Developers insert logging statements, metrics, and traces at known decision points. However, AI agents violate these assumptions in fundamental ways.
+
+Consider concrete failure scenarios that illustrate these challenges. In one production incident, an AI agent tasked with code review began modifying the codebase it was supposed to analyze, having misinterpreted its instructions due to ambiguous prompting. The agent's actions—file modifications, git commits, and even attempted pushes to remote repositories—occurred through subprocess invocations invisible to the Python-based monitoring framework. In another case, a data analysis agent entered an infinite loop, repeatedly calling expensive LLM APIs while attempting to solve an impossible constraint problem, consuming thousands of dollars in API costs before manual intervention. These incidents highlight the critical need for comprehensive observability that captures both agent reasoning and system effects.
+
+The threat model for AI agents differs fundamentally from traditional software security. Agents can be compromised through prompt injection attacks where malicious instructions embedded in user input override safety guidelines. They may experience goal drift where optimization for metrics leads to unintended behaviors. Multi-agent systems face coordination failures where individual agents work at cross-purposes. Most concerning, agents possess capability escalation potential—they can write code to extend their own abilities, potentially circumventing safety measures.
+
+These challenges translate into specific requirements for an ideal observability solution. First, it must provide framework-agnostic monitoring that remains stable despite rapid framework evolution. Second, it needs to capture both semantic information (what the agent intends) and system behavior (what the agent does). Third, it must maintain visibility across process boundaries as agents spawn subprocesses and execute external commands. Fourth, it should operate without requiring code modification or agent cooperation. Fifth, performance overhead must remain minimal to enable production deployment.
+
+Agents exhibit \emph{dynamic execution patterns} where the sequence of operations emerges from LLM reasoning rather than predefined code paths. An agent might solve the same task differently across runs, making it impossible to instrument all relevant code paths in advance. They demonstrate \emph{cross-boundary interactions} through tool use, frequently spawning subprocesses, executing shell commands, or making network requests that escape the monitoring scope of their parent process. A Python-based agent might execute bash scripts, launch curl commands, or even compile and run C programs—none of which would be visible to Python-level instrumentation. The \emph{semantic gap} between low-level operations and high-level intent makes debugging challenging. When an agent performs a series of file operations, understanding whether this represents data analysis, system reconnaissance, or unintended behavior requires correlating system calls with the agent's reasoning process captured in LLM interactions.
+
+The gap between traditional software observability and AI agent requirements becomes clear when we systematically compare their characteristics:
+
+\begin{table*}[t]
+  \caption{Traditional Software Systems vs AI Agent Systems Observability}
+  \label{tab:diff}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{2.85cm}X X@{}}
+    \toprule
+    \textbf{Aspect} &
+    \textbf{Traditional Software Systems} &
+    \textbf{AI Agent Systems} \\
+    \midrule
+    Observable Signals &
+    Structured metrics (latency, throughput, error rates), logs with predetermined schemas, distributed traces &
+    Unstructured natural language exchanges, dynamic tool invocations, emergent interaction patterns, semantic deviations \\
+    Execution Model &
+    Deterministic control flow, statically analyzable code paths, predictable state transitions &
+    Non-deterministic reasoning chains, dynamically generated execution plans, context-dependent behaviors \\
+    Failure Patterns &
+    System crashes, exceptions, resource exhaustion, timeout violations &
+    Semantic errors (hallucinations, factual inconsistencies), behavioral anomalies (reasoning loops), goal misalignment \\
+    State Persistence &
+    Well-defined locations (databases, caches), explicit lifecycles, garbage-collected memory &
+    Distributed across conversation histories, vector embeddings, dynamically created artifacts, LLM context windows \\
+    Monitoring Points &
+    Application boundaries, service interfaces, database queries, HTTP endpoints &
+    TLS-encrypted LLM communications, subprocess invocations, file system modifications, network activities \\
+    Debug Methodology &
+    Stack trace analysis, memory dumps, step-through debugging, log correlation &
+    Prompt-response analysis, reasoning chain reconstruction, tool usage patterns, cross-process correlation \\
+    Performance Metrics &
+    CPU utilization, memory consumption, I/O operations, network latency &
+    Token consumption, reasoning depth, tool invocation frequency, semantic coherence scores \\
+    \bottomrule
+  \end{tabularx}
+\end{table*}
+
+This comparison reveals that AI agent observability requires fundamentally different approaches from traditional software monitoring. While APM tools excel at tracking infrastructure health and performance metrics, they lack the semantic understanding necessary to evaluate agent reasoning quality, detect behavioral anomalies, or trace cross-process agent activities.
+
+These differences present several open research challenges that motivate our work. Instrumentation stability becomes critical as agent frameworks undergo rapid development with frequent API changes—LangChain alone has released over 100 versions in 2024. Traditional instrumentation approaches that depend on framework internals require constant maintenance, necessitating observation techniques that remain stable despite framework evolution. Current observability tools lack primitives for capturing AI-specific behaviors, requiring new telemetry formats that can represent prompt chains, reasoning patterns, and semantic anomalies to bridge the gap between system-level observations and high-level agent behaviors~\cite{semconv}. Understanding agent behavior requires correlating events across multiple abstraction layers, as a single agent action might involve an LLM API call, multiple file operations, subprocess spawning, and network requests. Current tools struggle to maintain causality relationships across these boundaries, especially when agents spawn independent processes. Agents routinely escape their parent process boundaries through subprocess execution—a Python agent might write a bash script, execute it, which then launches additional programs, causing traditional process-scoped monitoring to lose visibility at each boundary crossing.
+
+In summary, AI agent observability demands treating agents as autonomous, potentially unreliable entities rather than deterministic software components. This perspective shift drives our exploration of system-level monitoring approaches that observe agent behavior at stable system boundaries rather than within rapidly evolving application code.
+
+\subsection{Related Work}
+
+\subsubsection{Application-Level Instrumentation in Agent Frameworks}
+
+Current approaches to AI agent observability predominantly rely on application-level instrumentation integrated within agent frameworks. These solutions typically implement one of three patterns: (1) callback-based hooks that intercept framework method calls, (2) middleware layers that wrap LLM API interactions, or (3) explicit logging statements embedded within agent logic.
+
+While these approaches provide immediate visibility into agent operations, they face fundamental limitations when applied to autonomous AI systems. Agent frameworks undergo rapid iteration cycles—LangChain, for instance, has averaged multiple breaking changes per month throughout 2024. This instability forces continuous updates to instrumentation code. More critically, agents can dynamically modify their execution environment, loading new tools, rewriting prompts, or even generating code that bypasses instrumented pathways.
+
+The most concerning limitation emerges from the trust model mismatch. Traditional instrumentation assumes the monitored application cooperates with observation efforts. However, AI agents can be influenced through prompt injection or emergent behaviors to disable logging, falsify telemetry, or execute operations through uninstrumented channels. Consider an agent that writes malicious commands to a shell script, then executes it through standard tool APIs—the file creation appears benign, while the subsequent execution escapes monitoring entirely.
+
+\subsubsection{Landscape of Current AI Observability Solutions}
+
+To understand the current state of AI agent observability, we surveyed existing commercial and open-source solutions. Our analysis focused on tools that provide production-ready monitoring capabilities for LLM-based systems, offer integration paths for popular agent frameworks, and ship with trace collection and analysis features. We evaluated 12 representative solutions across multiple dimensions including integration approach, visibility scope, and architectural design.
+
+\begin{table*}[t]
+\caption{Landscape of AI Agent Observability Solutions}
+\label{tab:landscape}
+\centering
+\scriptsize
+\begin{tabular}{p{0.3cm} p{2.2cm} p{2.5cm} p{2.8cm} p{1.5cm} p{2.2cm}}
+\toprule
+\# & Tool / SDK (year) & Integration path & What it gives you & License / model & Notes \\
+\midrule
+1 & \textbf{LangSmith} (2023)~\cite{langsmith} & Add \texttt{import langsmith} to any LangChain / LangGraph app & Request/response traces, prompt \& token stats, built-in evaluation jobs & SaaS, free tier & Tightest integration with LangChain; OTel export in beta \\
+2 & \textbf{Helicone} (2023)~\cite{helicone} & Drop-in reverse-proxy or Python/JS SDK & Logs every OpenAI-style HTTP call; live cost \& latency dashboards; "smart" model routing & OSS core (MIT) + hosted & Proxy model keeps app code unchanged \\
+3 & \textbf{Traceloop} (2024)~\cite{traceloop} & One-line AI-SDK import → OTel & Full OTel spans for prompts, tools, sub-calls; replay \& A/B test flows & SaaS, generous free tier & Uses standard OTel data; works with any backend \\
+4 & \textbf{Arize Phoenix} (2024)~\cite{phoenix} & \texttt{pip install arize-phoenix}; OpenInference tracer & Local UI + vector-store for traces; automatic evals (toxicity, relevance) with another LLM & Apache-2.0, self-host or cloud & Ships its own open-source UI; good for offline debugging \\
+5 & \textbf{Langfuse} (2024)~\cite{langfuse} & Langfuse SDK \emph{or} send raw OTel OTLP & Nested traces, cost metrics, prompt mgmt, evals; self-host in Docker & OSS (MIT) + cloud & Popular in RAG / multi-agent projects; OTLP endpoint keeps you vendor-neutral \\
+6 & \textbf{WhyLabs LangKit} (2023)~\cite{whylabs} & Wrapper that extracts text metrics & Drift, toxicity, sentiment, PII flags; sends to WhyLabs platform & Apache-2.0 core, paid cloud & Adds HEAVY text-quality metrics rather than request tracing \\
+7 & \textbf{PromptLayer} (2022)~\cite{promptlayer} & Decorator / context-manager or proxy & Timeline view of prompt chains; diff \& replay; built on OTel spans & SaaS & Early mover; minimal code changes but not open source \\
+8 & \textbf{Literal AI} (2024)~\cite{literalai} & Python SDK + UI & RAG-aware traces, eval experiments, datasets & OSS core + SaaS & Aimed at product teams shipping chatbots \\
+9 & \textbf{W\&B Weave / Traces} (2024)~\cite{wandb} & \texttt{import weave} or W\&B SDK & Deep link into existing W\&B projects; captures code, inputs, outputs, user feedback & SaaS & Nice if you already use W\&B for ML experiments \\
+10 & \textbf{Honeycomb Gen-AI views} (2024)~\cite{honeycomb} & Send OTel spans; Honeycomb UI & Heat-map + BubbleUp on prompt spans, latency, errors & SaaS & Built atop Honeycomb's mature trace store; no eval layer \\
+11 & \textbf{OpenTelemetry GenAI semantic-conventions} (2024)~\cite{semconv} & Spec + contrib Python lib (\texttt{opentelemetry-instrumentation-openai}) & Standard span/metric names for models, agents, prompts & Apache-2.0 & Gives you a lingua-franca; several tools above emit it \\
+12 & \textbf{OpenInference spec} (2023)~\cite{openinference} & Tracer wrapper (supports LangChain, LlamaIndex, Autogen…) & JSON schema for traces + plug-ins; Phoenix uses it & Apache-2.0 & Spec, not a hosted service; pairs well with any OTel backend \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+Our survey reveals three dominant architectural patterns in existing solutions. SDK-based instrumentation approaches, exemplified by LangSmith~\cite{langsmith}, Langfuse~\cite{langfuse}, and Traceloop~\cite{traceloop}, require modifying agent code to add instrumentation hooks. While providing detailed visibility into framework operations, they suffer from tight coupling to rapidly evolving APIs. Version incompatibilities and breaking changes require constant maintenance, with instrumentation code often lagging behind framework updates.
+
+Proxy-based interception solutions such as Helicone~\cite{helicone} and PromptLayer~\cite{promptlayer} take a different approach by intercepting HTTP traffic between agents and LLM providers. This architecture avoids code modification but captures only LLM interactions, missing critical local activities such as tool usage, file operations, and subprocess spawning. When an agent executes local commands or manipulates files, these actions remain completely invisible to proxy-based monitors.
+
+Recent standardization efforts including OpenTelemetry GenAI semantic conventions~\cite{semconv} and the OpenInference specification~\cite{openinference} attempt to define common schemas for AI observability data. While these initiatives improve interoperability between tools, they still rely on voluntary instrumentation and assume agents will faithfully report their activities. This trust model fails when agents are compromised or exhibit emergent behaviors that bypass instrumentation.
+
+\subsubsection{Critical Limitations of Current Approaches}
+
+Our analysis identifies three fundamental limitations in existing agent observability solutions:
+
+\textbf{Instrumentation Fragility}: The rapid evolution of agent frameworks creates a moving target for instrumentation. Framework APIs change frequently, internal structures are refactored, and new capabilities are added continuously. More challenging still, agents themselves can modify their runtime environment—loading new libraries, generating helper functions, or creating novel tool implementations. This dynamic nature means instrumentation code requires constant maintenance to remain functional.
+
+\textbf{Limited Scope of Visibility}: Application-level instrumentation captures only events within the instrumented process. When agents spawn subprocesses, make system calls, or interact with external services, these activities often escape observation. A Python-based agent executing shell commands through \texttt{subprocess.run()} leaves no trace in Python-level monitoring. Similarly, network requests made by child processes remain invisible to the parent's instrumentation.
+
+\textbf{Semantic Gap}: Even when instrumentation successfully captures low-level operations, interpreting their meaning requires understanding the agent's high-level intent. Current tools struggle to correlate system activities (file writes, network requests) with agent reasoning (prompts, model responses). This semantic gap makes it difficult to distinguish between legitimate agent operations and potentially harmful behaviors.
+
+\subsubsection{System-Level Monitoring Approaches}
+
+Several research efforts have explored system-level monitoring for security and performance analysis, providing foundations that we extend for AI agent observability. Falco~\cite{falco}, a CNCF project for runtime security monitoring using kernel events, demonstrates the feasibility of system-level observation but lacks AI-specific semantic understanding. AgentSight extends Falco's approach by adding correlation between kernel events and LLM interactions. Tracee~\cite{tracee} from Aqua Security pioneered eBPF-based runtime security monitoring patterns that we adapted for capturing agent-specific behaviors while adding LLM-aware event correlation. Pixie~\cite{pixie} by New Relic showed how eBPF enables low-overhead Kubernetes observability, influencing our container deployment strategies and performance optimization techniques. Tetragon~\cite{tetragon} from the Cilium project demonstrated efficient kernel event filtering that inspired our approach to reducing data volume while maintaining comprehensive visibility.
+
+The key insight from examining these approaches is that while system-level monitoring provides comprehensive visibility, existing tools lack the semantic understanding necessary for AI agent observability. They can detect that a process spawned a shell, but cannot correlate this with an agent's reasoning chain or determine whether the action aligns with the agent's stated goals. This semantic gap motivates our boundary tracing approach that combines system-level observation with LLM interaction capture.
+
+\subsubsection{Critical Gaps and Our Approach}
+
+Our analysis identifies several critical gaps in current solutions that motivate the need for a fundamentally different approach. All surveyed tools operate within application boundaries, missing system calls, subprocess creation, and network activities occurring outside the instrumented process. This limitation becomes critical when agents execute external commands or spawn helper processes that carry out significant portions of the agent's work. Existing tools also assume agents will faithfully report their activities through instrumentation APIs, an assumption that fails catastrophically when agents are compromised through prompt injection, experience bugs, or intentionally bypass monitoring to achieve their goals.
+
+While current tools capture operational metrics such as latency and token usage, they struggle to understand the semantic meaning of agent actions. The challenge of correlating low-level operations with high-level agent intentions remains unsolved—when an agent writes a file, current tools cannot determine whether this represents legitimate data processing or malicious exfiltration. Perhaps most critically, when agents spawn multiple processes or interact across system boundaries, maintaining causal relationships between events becomes nearly impossible with application-level monitoring. Current tools lack mechanisms to track activity flows across process boundaries, losing visibility precisely when agent behavior becomes most complex and potentially dangerous.
+
+These gaps motivate our exploration of system-level monitoring approaches that observe agent behavior at kernel and network boundaries, providing comprehensive visibility regardless of agent cooperation or framework changes. By shifting observation to stable system interfaces, we can capture the complete picture of agent behavior while remaining resilient to the rapid evolution of agent frameworks and the potential adversarial nature of compromised agents.
