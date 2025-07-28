@@ -27,23 +27,12 @@
 \end{Verbatim}
 \end{center}
 
-Of course. Here are the restructured and improved `Design` and `Implementation` sections, based on the previous analysis. The changes focus on sharpening the narrative, replacing the ASCII diagram with a proper figure description, and adding technical depth.
-
-***
-
-### Rewritten Section 4: Design
-
 \section{Design}
+
 The design of AgentSight is guided by a single imperative: to bridge the semantic gap between an agent's intent and its actions. We achieve this through a novel observability paradigm, \emph{boundary tracing}, which is built on a foundation of stable system interfaces and realized through a multi-signal correlation engine.
 
 \subsection{Boundary Tracing: A Principled Approach}
-Our approach is rooted in a key insight: while agent frameworks and internal logic are volatile, the system boundaries they must cross to perform any meaningful action are stable and unavoidable. Boundary tracing leverages this stability to provide durable and comprehensive observability. The primary goal of this approach is to enable **Semantic Correlation**, the ability to causally link high-level intentions with low-level system events. This goal is made possible by two foundational principles:
-
-\begin{itemize}
-    \item \textbf{Comprehensiveness:} By monitoring at the kernel, we ensure that no system-level action—from process creation to file I/O—can go unobserved, regardless of the agent's implementation language or its attempts to evade monitoring by spawning subprocesses.
-    \item \textbf{Stability:} System call ABIs and network protocols evolve far more slowly than agent frameworks. Monitoring at these stable interfaces provides a durable solution that is resilient to the constant, breaking changes common in agent libraries.
-\end{itemize}
-This paradigm fundamentally shifts the trust model from assuming a cooperative agent to enforcing observation at tamper-proof system boundaries.
+Our approach is rooted in a key insight: while agent frameworks and internal logic are volatile, the system boundaries they must cross to perform any meaningful action are stable and unavoidable. Boundary tracing leverages this stability to provide durable and comprehensive observability. The primary goal of this approach is to enable \textbf{Semantic Correlation}, the ability to causally link high-level intentions with low-level system events. This goal is made possible by two foundational principles: \textbf{Comprehensiveness}, where by monitoring at the kernel we ensure that no system-level action—from process creation to file I/O—can go unobserved, regardless of the agent's implementation language or its attempts to evade monitoring by spawning subprocesses; and \textbf{Stability}, where system call ABIs and network protocols evolve far more slowly than agent frameworks, providing a durable solution resilient to the constant breaking changes common in agent libraries. This paradigm fundamentally shifts the trust model from assuming a cooperative agent to enforcing observation at tamper-proof system boundaries.
 
 \subsection{System Architecture: Observing the Boundaries}
 AgentSight's architecture is designed to simultaneously tap into the two critical boundaries an agent interacts with: the network boundary for semantic intent and the kernel boundary for system actions. Figure 1 illustrates this architecture. We use eBPF to place non-intrusive probes at both boundaries. Probes on SSL library functions in userspace capture the decrypted **Intent Stream** (LLM prompts and responses), while probes at the kernel level capture the **Action Stream** (syscalls, process events). Both streams are processed by our userspace correlation engine, which joins them to produce a unified, causally-linked event trace.
@@ -64,16 +53,7 @@ Several key decisions enable AgentSight to effectively bridge the semantic gap:
 
 \textbf{Uprobes for Transparent TLS Interception:} To capture semantic intent, we intercept decrypted data directly from the agent's memory by placing `uprobes` on SSL library functions (e.g., `SSL_read`/`SSL_write`). This approach is superior to network-level packet capture, as it avoids the complexity of TLS key management, and more efficient than proxy-based solutions, which introduce network latency and configuration overhead.
 
-\textbf{Multi-Signal Causal Correlation Engine:} The core of our design is a correlation strategy that establishes causality between intent and action. We designed a multi-signal engine that relies on:
-\begin{enumerate}
-    \item \textbf{Process Lineage:} Building a complete process tree by tracking `fork` and `execve` events to link actions in child processes back to the parent agent.
-    \item \textbf{Temporal Proximity:} Associating actions that occur within a narrow time window immediately following an LLM response.
-    \item \textbf{Argument Matching:} Directly matching content from LLM responses—such as filenames, URLs, or commands—with the arguments of subsequent system calls.
-\end{enumerate}
-
----
-
-### Rewritten Section 5: Implementation
+\textbf{Multi-Signal Causal Correlation Engine:} The core of our design is a correlation strategy that establishes causality between intent and action. We designed a multi-signal engine that relies on three key mechanisms: \textbf{Process Lineage}, which builds a complete process tree by tracking \texttt{fork} and \texttt{execve} events to link actions in child processes back to the parent agent; \textbf{Temporal Proximity}, which associates actions that occur within a narrow time window immediately following an LLM response; and \textbf{Argument Matching}, which directly matches content from LLM responses—such as filenames, URLs, or commands—with the arguments of subsequent system calls. Together, these signals enable AgentSight to definitively establish causal relationships between high-level intentions and low-level system operations across process boundaries.
 
 \section{Implementation}
 AgentSight is implemented as a userspace daemon written in Rust that orchestrates a suite of eBPF programs. The system is designed for high performance and low overhead, processing raw event streams from the kernel to produce correlated, human-readable observability data.
@@ -86,11 +66,4 @@ Our eBPF probes are responsible for capturing the raw intent and action streams 
 \textbf{Capturing System Actions (Kernel):} A second eBPF program monitors kernel activity. We use efficient, stable `tracepoints` like `sched_process_fork` and `sched_process_exit` to build a process tree. For detailed actions, we use `kprobes` to dynamically attach to specific system calls relevant to agent behavior, such as `openat2` (file access), `connect` (network connections), and `execve` (program execution). Aggressive in-kernel filtering ensures that only events originating from targeted agent processes are sent to userspace, minimizing overhead.
 
 \subsection{The Correlation Engine}
-The Rust-based userspace daemon houses the core correlation engine. It consumes the high-throughput intent and action streams from eBPF ring buffers and performs three stages of analysis:
-
-\begin{enumerate}
-    \item \textbf{Enrichment:} Raw events are enriched with context. For example, a file descriptor from an `openat2` call is mapped to a full file path, and a process ID is mapped to its full command line and parent process from the process tree.
-    \item \textbf{Stateful Tracking:} The engine maintains the state of each agent and its children in a process-tree data structure. It also tracks open files and network connections for each process.
-    \item \textbf{Causal Linking:} Using the enriched data and maintained state, the engine applies the multi-signal correlation logic described in our design. It searches for system actions that match the "fingerprint" of a preceding LLM intent based on process lineage, temporal proximity (within a 100-500ms window), and content matching, thereby bridging the semantic gap and producing a single, coherent event trace.
-\end{enumerate}
-This entire pipeline is designed for streaming analysis, avoiding the need to store complete event histories and enabling real-time detection with a memory footprint of less than 200MB on a typical system. 
+The Rust-based userspace daemon houses the core correlation engine that consumes high-throughput intent and action streams from eBPF ring buffers and performs three stages of analysis. First, \textbf{Enrichment} adds context to raw events—for example, mapping a file descriptor from an \texttt{openat2} call to a full file path, and a process ID to its full command line and parent process from the process tree. Second, \textbf{Stateful Tracking} maintains the state of each agent and its children in a process-tree data structure while tracking open files and network connections for each process. Finally, \textbf{Causal Linking} uses the enriched data and maintained state to apply the multi-signal correlation logic, searching for system actions that match the "fingerprint" of a preceding LLM intent based on process lineage, temporal proximity (within a 100-500ms window), and content matching, thereby bridging the semantic gap and producing a single, coherent event trace. This entire pipeline is designed for streaming analysis, avoiding the need to store complete event histories and enabling real-time detection with a memory footprint of less than 200MB on a typical system. 
