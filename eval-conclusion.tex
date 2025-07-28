@@ -41,65 +41,15 @@ We evaluated AgentSight's effectiveness through three comprehensive case studies
 
 \subsubsection{Case Study 1: Detecting Prompt Injection Attacks}
 
-We tested AgentSight's ability to detect prompt injection attacks where an agent is manipulated to perform unintended actions:
-
-\textbf{Attack Scenario}: A data analysis agent receives a crafted prompt that causes it to exfiltrate sensitive data. The attack demonstrates a classic prompt injection technique where malicious commands are embedded within seemingly legitimate requests. The attacker crafts a prompt that begins with a reasonable task (analyzing sales data) but appends a command injection that exfiltrates sensitive system files. This attack pattern exploits agents' tendency to follow instructions literally without security validation.
-
-\textbf{AgentSight Detection}:
-1. \textbf{LLM Interaction} (T+0ms): Captured prompt with suspicious command injection
-2. \textbf{Code Generation} (T+125ms): Agent generates Python script with embedded curl command
-3. \textbf{Process Spawn} (T+342ms): Python script executes, spawns curl subprocess
-4. \textbf{Network Activity} (T+367ms): Outbound HTTPS connection to suspicious domain
-5. \textbf{File Access} (T+368ms): Read operation on /etc/passwd
-
-\textbf{Correlation Output}: The correlation engine demonstrates AgentSight's ability to connect high-level threats with low-level evidence. The system identified potential data exfiltration with 92\% confidence based on multiple correlated signals: detected prompt injection in the original request, subsequent sensitive file access to /etc/passwd, outbound connection to a suspicious domain, and 1.2KB data transfer matching the file size. The timeline reconstruction shows the complete attack chain from initial prompt through code generation, execution, and ultimate exfiltration.
-
-\textbf{Analysis Impact}: This detection capability proves critical for production deployments where agents process untrusted input. Traditional application-level monitoring would miss the correlation between the initial prompt and the subsequent system activities across different processes. AgentSight's boundary tracing approach captures the complete attack narrative, enabling rapid incident response and forensic analysis.
+We tested AgentSight's ability to detect prompt injection attacks where a data analysis agent received a crafted prompt embedding malicious commands within a legitimate request to analyze sales data, ultimately exfiltrating /etc/passwd. AgentSight captured the complete attack chain: LLM interaction with suspicious prompt (T+0ms), agent-generated Python script with embedded curl command (T+125ms), subprocess spawn (T+342ms), outbound HTTPS connection to suspicious domain (T+367ms), and sensitive file read (T+368ms). The correlation engine identified potential data exfiltration with 92\% confidence by linking the prompt injection with subsequent file access, suspicious network connection, and 1.2KB transfer matching the file size. This detection proves critical for production deployments where traditional application-level monitoring would miss the correlation between initial prompts and system activities across process boundaries, while AgentSight's boundary tracing captures the complete attack narrative enabling rapid incident response.
 
 \subsubsection{Case Study 2: Reasoning Loop Detection}
 
-\textbf{Scenario}: An agent enters an infinite reasoning loop while attempting a complex task. Reasoning loops manifest as cyclic dependencies in agent problem-solving attempts. The agent repeatedly cycles through the same logical chain: needing to solve X requires solving Y, but solving Y requires solving X. This circular reasoning consumes computational resources without making progress toward the actual goal. Such loops commonly occur when agents encounter problems outside their training distribution or when task decomposition logic contains flaws.
-
-\textbf{AgentSight Detection}: The system employs multiple detection mechanisms to identify reasoning loops:
-
-1. \textbf{Pattern Analysis}: AgentSight tracks LLM API call sequences, applying cycle detection algorithms to identify repeated prompt structures. The system uses semantic similarity metrics rather than exact matching, catching loops even when agents rephrase queries.
-
-2. \textbf{Resource Monitoring}: Token consumption rates provide early warning signals. Healthy agent reasoning shows decreasing token usage as problems narrow; loops exhibit constant or increasing consumption without corresponding progress markers.
-
-3. \textbf{Temporal Correlation}: By analyzing timestamps between related API calls, the system identifies suspiciously regular intervals characteristic of automated retry logic stuck in loops.
-
-4. \textbf{Semantic Progress Tracking}: AgentSight evaluates whether successive LLM responses indicate forward progress or circular reasoning, using embedding-based similarity to detect semantic stagnation.
-
-The system triggered an alert after detecting three complete cycles, preventing further resource waste. In this case, the agent consumed 4,800 tokens across 12 API calls before AgentSight intervened, saving an estimated \$2.40 in API costs and preventing potential service degradation.
+An agent attempting a complex task entered an infinite reasoning loop with circular dependencies where solving X required solving Y, but solving Y required solving X—a pattern common when agents encounter problems outside their training distribution. AgentSight detected this through multiple mechanisms: pattern analysis tracking LLM API call sequences with semantic similarity metrics to identify repeated prompt structures even when rephrased; resource monitoring showing constant token consumption without progress markers instead of healthy decreasing usage; temporal correlation revealing suspiciously regular intervals between API calls characteristic of stuck retry logic; and semantic progress tracking using embedding-based similarity to detect reasoning stagnation. The system triggered an alert after detecting three complete cycles where the agent had consumed 4,800 tokens across 12 API calls, with AgentSight's intervention saving an estimated \$2.40 in API costs and preventing service degradation—demonstrating the critical importance of semantic-aware monitoring for autonomous agents.
 
 \subsubsection{Case Study 3: Multi-Agent Coordination Monitoring}
 
-\textbf{Scenario}: Multiple agents collaborating on a software development task:
-
-- Agent A: Architecture design
-- Agent B: Implementation
-- Agent C: Testing
-
-\textbf{AgentSight Insights}: The multi-agent monitoring revealed complex interaction patterns invisible to traditional observability tools:
-
-\textbf{Quantitative Analysis}:
-- Total Events: 12,847 (4,282 per agent average)
-- Correlated Actions: 342 (representing meaningful collaborations)
-- Cross-Agent Dependencies: 27 (synchronization points)
-- Shared Resources: 15 files, 3 network endpoints
-- Coordination Overhead: 18\% of total runtime
-
-\textbf{Behavioral Patterns Discovered}:
-
-1. \textbf{Handoff Inefficiencies}: Agent B spent 34\% of its time in wait states, primarily blocked on Agent A's architecture decisions. The visualization revealed Agent A's tendency to revise designs multiple times, triggering cascading re-work in downstream agents.
-
-2. \textbf{Resource Contention}: File locking patterns showed agents competing for access to shared configuration files. Agent C's testing procedures repeatedly conflicted with Agent B's ongoing implementations, causing 23 retry cycles.
-
-3. \textbf{Communication Overhead}: Inter-agent communication through shared files proved inefficient. Agents polled for updates every 2 seconds, generating 1,800 unnecessary file system operations.
-
-4. \textbf{Emergent Coordination}: Despite lacking explicit coordination protocols, agents developed implicit synchronization patterns. Agent B learned to batch changes before signaling Agent C, reducing test suite executions by 40\%.
-
-\textbf{Optimization Opportunities}: Based on these insights, implementing explicit coordination mechanisms could reduce runtime by 25\%, while moving to message-based communication would eliminate 90\% of file system polling overhead.
+AgentSight monitored three agents collaborating on software development (Agent A: architecture design, Agent B: implementation, Agent C: testing), capturing 12,847 total events with 342 correlated actions across 27 synchronization points involving 15 shared files and 3 network endpoints. The analysis revealed critical inefficiencies invisible to traditional monitoring: Agent B spent 34\% of time blocked on Agent A's multiple design revisions triggering cascading rework; file locking patterns showed resource contention with Agent C's testing conflicting with Agent B's implementation causing 23 retry cycles; inter-agent communication through shared files generated 1,800 unnecessary file system operations from 2-second polling intervals; yet agents developed emergent coordination with Agent B learning to batch changes, reducing test executions by 40\%. These insights demonstrate that explicit coordination mechanisms could reduce runtime by 25\% and message-based communication would eliminate 90\% of polling overhead—revealing how boundary tracing uniquely captures multi-agent system dynamics that application-level monitoring cannot observe across process boundaries.
 
 
 \section{Future Work}
