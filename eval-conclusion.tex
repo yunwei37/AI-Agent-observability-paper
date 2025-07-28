@@ -2,13 +2,10 @@
 
 \subsection{Experimental Setup}
 
-We evaluated AgentSight across diverse production workloads to assess performance overhead, detection effectiveness, and behavioral insights. Our experimental environment consisted of AWS EC2 c5.2xlarge instances with 8 vCPUs and 16GB RAM running Linux kernel 5.15 with BTF support enabled. We tested three major agent frameworks: LangChain 0.1.0 representing the most popular open-source framework, AutoGen 0.2.0 for multi-agent scenarios, and Claude Code for production code generation tasks. Workloads included code generation tasks ranging from simple functions to complex system implementations, data analysis pipelines processing CSV and JSON datasets, and system administration tasks involving package installation and configuration management.
-
-Performance measurements focused on end-to-end task completion time, CPU utilization during agent execution, memory consumption patterns, and event generation rates. We compared identical workloads with and without AgentSight enabled, running each experiment 50 times to ensure statistical significance. All measurements excluded initial warm-up runs to avoid JIT compilation effects.
+We evaluated AgentSight on AWS EC2 c5.2xlarge instances (8 vCPUs, 16GB RAM, Linux 5.15) across three agent frameworks: LangChain 0.1.0, AutoGen 0.2.0, and Claude Code. Workloads included code generation (simple functions to complex systems), data analysis (CSV/JSON processing), and system administration (package management). We measured end-to-end completion time, CPU/memory usage, and event rates, running each experiment 50 times with and without AgentSight to ensure statistical significance.
 
 \subsection{Performance Evaluation}
 
-AgentSight achieves its design goal of sub-3\% overhead across all tested workloads, making it suitable for production deployment. Table~\ref{tab:performance} summarizes performance impacts across different agent task types.
 
 \begin{table}[h]
 \centering
@@ -27,11 +24,7 @@ Idle Agent & 0.1\% CPU & 0.3\% CPU & +0.2\% & 12 \\
 \end{tabular}
 \end{table}
 
-The results demonstrate consistent low overhead across diverse workload types. Simple code generation tasks show minimal impact at 1.6\% overhead, as these workloads generate fewer system events. Complex code generation involving multiple file operations and subprocess spawning increases overhead slightly to 2.2\%, still well within acceptable bounds. System administration tasks exhibit the highest overhead at 2.6\% due to intensive process spawning and file system operations, generating over 2,000 events per second. Even under this peak load, AgentSight maintains responsive performance.
-
-Memory consumption remains predictable at 128MB base allocation plus 8MB per CPU core for ring buffers. This translates to 192MB total on our 8-core test systems, negligible compared to typical agent memory requirements. The fixed memory footprint prevents resource exhaustion under sustained load, a critical requirement for production deployments.
-
-CPU overhead analysis reveals that eBPF probe execution accounts for only 15\% of total overhead, with the remainder attributed to event processing and correlation. This distribution validates our design choice of kernel-space filtering to minimize data movement. During idle periods when agents await user input, AgentSight adds only 0.2\% CPU utilization, ensuring minimal impact on system resources.
+Table~\ref{tab:performance} summarizes performance impacts across different agent task types.The results consistent sub-3\% overhead across all workloads. Simple code generation shows minimal 1.6\% impact due to fewer system events, while complex generation with extensive file operations reaches 2.2\%. System administration tasks exhibit the highest overhead at 2.6\% due to intensive process spawning and file system operations, generating over 2,000 events per second. Even under peak load, AgentSight maintains responsive performance with fixed memory footprint (192MB on 8-core systems) and negligible idle overhead (0.2\% CPU), validating our kernel-space filtering design.
 
 \subsection{Effectiveness Evaluation}
 
