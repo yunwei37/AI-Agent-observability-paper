@@ -35,7 +35,7 @@
 
 \sloppy
 \begin{abstract}
-AI agents exhibit non-deterministic, evolving behaviors that render traditional monitoring inadequate. Current framework-specific instrumentation suffers from fragility against rapid evolution and security vulnerabilities like prompt injection. We propose boundary tracing—a zero-instrumentation approach using eBPF to capture semantics at kernel/network interfaces. This provides tamper-resistant, framework-agnostic visibility into prompt execution, tool interactions, and critical failures, bridging the semantic gap for robust auditing and debugging.
+AI agents exhibit non-deterministic, evolving behaviors that render traditional monitoring inadequate. Current framework-specific instrumentation suffers from fragility against rapid evolution and security vulnerabilities like prompt injection. We propose boundary tracing, a zero-instrumentation approach using eBPF to capture semantics at kernel/network interfaces. This provides tamper-resistant, framework-agnostic visibility into prompt execution, tool interactions, and critical failures, bridging the semantic gap for robust auditing and debugging.
 \end{abstract}
 
 
@@ -45,14 +45,14 @@ AI agents exhibit non-deterministic, evolving behaviors that render traditional 
 
 \section{The Fundamental Observability Challenge}
 
-AI agents operate differently from traditional systems. Where conventional monitoring focuses on metrics like latency and CPU usage, AI agents require semantic understanding of reasoning traces, tool interactions, and emergent failure modes. This creates three core challenges: First, the rapid evolution of agent frameworks means instrumentation becomes obsolete within weeks as prompts, tools, and workflows change. Second, non-deterministic outputs make failure detection complex—hallucinations, infinite reasoning loops, and coordination failures lack clear signatures. Third, security vulnerabilities like prompt injection allow compromised agents to tamper with their own monitoring.
+AI agents operate differently from traditional systems. Where conventional monitoring focuses on metrics like latency and CPU usage, AI agents require semantic understanding of reasoning traces, tool interactions, and emergent failure modes. This creates three core challenges: First, the rapid evolution of agent frameworks means instrumentation becomes obsolete within weeks as prompts, tools, and workflows change. Second, non-deterministic outputs make failure detection complex. Hallucinations, infinite reasoning loops, and coordination failures lack clear signatures. Third, security vulnerabilities like prompt injection allow compromised agents to tamper with their own monitoring.
 
 Key differences in observability requirements include the shift from resource metrics to semantic traces, from deterministic failures to open-ended quality judgments, and from request-scoped state to persistent memories lasting hours or days. Crucially, the primary signal source moves from structured logs to encrypted TLS payloads and CLI executions, while security auditing requires tamper-proof evidence of reasoning processes rather than just code execution paths.
 
 
 \section{Limitations in Current Solutions}
 
-Analysis of 12 leading tools (LangSmith, Traceloop, Phoenix, etc.) reveals critical limitations. All solutions require application-level instrumentation—either through SDKs or proxies—making them vulnerable to three failure modes: Framework changes break instrumentation when agents modify prompts or tool wiring; compromised agents can suppress or falsify logs during prompt injection attacks; cross-process interactions become invisible when agents directly execute system commands. Because today’s solutions \emph{mostly} live inside the agent process, they inherit the same fragility as the agent code:
+Analysis of 12 leading tools (LangSmith, Traceloop, Phoenix, etc.) reveals critical limitations. All solutions require application-level instrumentation, either through SDKs or proxies, making them vulnerable to three failure modes: Framework changes break instrumentation when agents modify prompts or tool wiring; compromised agents can suppress or falsify logs during prompt injection attacks; cross-process interactions become invisible when agents directly execute system commands. Because today’s solutions \emph{mostly} live inside the agent process, they inherit the same fragility as the agent code:
 
 \begin{itemize}
   \item \textbf{Breakage when you tweak the prompt graph} – each new node needs a decorator.
