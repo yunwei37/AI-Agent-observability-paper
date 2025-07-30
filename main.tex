@@ -1,6 +1,7 @@
-\documentclass[sigplan,screen,review,9pt]{acmart}
-\settopmatter{printacmref=false, printccs=false, printfolios=false}
+\documentclass[sigplan,10pt]{acmart}
+
 \renewcommand\footnotetextcopyrightpermission[1]{}
+\settopmatter{printacmref=false, printccs=false, printfolios=false}
 
 \usepackage{listings}     % For ASCII-art / code blocks
 \usepackage{booktabs}     % Nicer tables
@@ -11,6 +12,8 @@
 \usepackage{fontspec}   % 字体支持
 \usepackage{newunicodechar} % 自定义 Unicode 字符
 \usepackage{fancyvrb}   % 增强的 verbatim 环境
+\usepackage{tikz}
+\usetikzlibrary{positioning, calc}
 
 % 设置等宽字体（选择支持这些符号的字体）
 \setmonofont{DejaVu Sans Mono}[Scale=MatchLowercase]  % 或 Noto Sans Mono, Fira Code 等
@@ -34,18 +37,22 @@
 
 \sloppy
 \begin{abstract}
-    LLM agents such as Claude Code violate the fundamental assumptions of software monitoring. Their ability to dynamically generate code and spawn arbitrary subprocesses creates a critical semantic gap: existing tools can see either an agent's high-level intent (via LLM prompts) or its low-level actions (via system calls), but never both in a correlated view. This blindness makes it hard to distinguish between benign operations, malicious attacks or costly failures. We introduce AgentSight, an observability framework that bridges this semantic gap using a novel hybrid approach. Our approach, \emph{boundary tracing}, monitors agents from outside their application code at stable system interfaces using eBPF. AgentSight intercepts TLS-encrypted LLM traffic to understand semantic intent and monitors kernel events to observe system-wide effects, then causally correlates these two streams across process boundaries using a real-time engine and secondary LLM analysis. This instrumentation-free technique is framework-agnostic, resilient to rapid API changes, and incurs less than 3\% performance overhead. Our evaluation shows AgentSight can help detect sophisticated prompt injection attacks, identify resource-wasting reasoning loops, and reveal hidden coordination bottlenecks in multi-agent systems. AgentSight is released as an open-source project at \url{https://github.com/agent-sight/agentsight}.
+    Modern software infrastructure increasingly relies on LLM agents for development and maintenance, such as Claude Code and Gemini-cli. However, these AI agents differ fundamentally from traditional deterministic software, posing a significant challenge to conventional monitoring and debugging. This creates a critical semantic gap: existing tools observe either an agent's high-level intent (via LLM prompts) or its low-level actions (e.g., system calls), but cannot correlate these two views. This blindness makes it difficult to distinguish between benign operations, malicious attacks, and costly failures. We introduce AgentSight, an observability framework that bridges this semantic gap using a hybrid approach. Our approach, \emph{boundary tracing}, monitors agents from outside their application code at stable system interfaces using eBPF. AgentSight intercepts TLS-encrypted LLM traffic to extract semantic intent, monitors kernel events to observe system-wide effects, and causally correlates these two streams across process boundaries using a real-time engine and secondary LLM analysis. This instrumentation-free technique is framework-agnostic, resilient to rapid API changes, and incurs less than 3\% performance overhead. Our evaluation shows AgentSight detects prompt injection attacks, identifies resource-wasting reasoning loops, and reveals hidden coordination bottlenecks in multi-agent systems. AgentSight is released as an open-source project at \url{https://github.com/agent-sight/agentsight}.
 \end{abstract}
 
 % LLM agents such as Claude Code violate the fundamental assumptions of software monitoring. Their ability to dynamically generate code and spawn arbitrary subprocesses creates a critical semantic gap: existing tools can see either an agent's high-level intent (via LLM prompts) or its low-level actions (via system calls), but never both in a correlated view. This blindness makes it impossible to distinguish between benign operations and malicious attacks or costly failures. We introduce AgentSight, an observability framework designed to bridge this semantic gap. Our approach, \emph{boundary tracing}, monitors agents from outside their application code at stable system interfaces using eBPF. AgentSight intercepts TLS-encrypted LLM traffic to understand semantic intent and monitors kernel events to observe system-wide effects, then causally correlates these two streams across process boundaries. This instrumentation-free technique is framework-agnostic, resilient to rapid API changes, and incurs less than 3\% performance overhead. Our evaluation shows AgentSight can help detect sophisticated prompt injection attacks, identify resource-wasting reasoning loops, and reveal hidden coordination bottlenecks in multi-agent systems. We release AgentSight as open source to enable the safe and observable deployment of autonomous AI in production.
 
 
+\settopmatter{printfolios=true}
+
 
 \maketitle
+\pagestyle{plain}
+
 
 \input{intro}
 
-\input{background}
+\input{bg2}
 
 \input{design-impl}
 

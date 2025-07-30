@@ -1,0 +1,127 @@
+% \begin{tikzpicture}[
+%     % Global settings for a more compact layout
+%     node distance=2mm and 5mm,
+%     % --- STYLES ---
+%     outerbox/.style={
+%         draw, 
+%         rectangle, 
+%         minimum width=9cm, 
+%         minimum height=10.5cm, 
+%         line width=0.5pt
+%     },
+%     innerbox/.style={
+%         draw, 
+%         rectangle, 
+%         minimum width=8cm, 
+%         line width=0.5pt, 
+%         fill=gray!5
+%     },
+%     boxtitle/.style={
+%         font=\small\bfseries, 
+%         text centered
+%     },
+%     boxsubtitle/.style={
+%         font=\small\itshape, 
+%         text centered, 
+%         text width=6.5cm
+%     },
+%     listtext/.style={
+%         font=\small, 
+%         align=left
+%     },
+%     boundarytext/.style={
+%         font=\small, 
+%         fill=white, % White fill to sit cleanly over the line
+%         inner sep=2pt
+%     },
+%     sidelabel/.style={
+%         font=\small\itshape, 
+%         align=left
+%     },
+%     boundaryline/.style={
+%         draw, 
+%         double, 
+%         thick, 
+%         gray!80
+%     },
+%     vertical_arrow/.style={
+%         <->, % Bidirectional arrow
+%         thick,
+%         >=latex % Arrowhead style
+%     }
+% ]
+
+% % 1. Main outer box and its title
+% \node[outerbox] (main) {};
+% \node[boxtitle, anchor=north, yshift=-4mm] at (main.north) {System Environment};
+% \node[boxsubtitle, below=1mm of main.north] at (main.north) {(Operating System, Containers, Services)};
+
+% % 2. Top inner box (Agent Runtime)
+% \node[innerbox, minimum height=3cm, anchor=north, yshift=-1.8cm] (agent) at (main.north) {};
+% \node[boxtitle, anchor=north, yshift=-4mm] at (agent.north) {Agent Runtime Framework};
+% \node[boxsubtitle, anchor=north, yshift=-9mm] at (agent.north) {(LangChain, AutoGen, Claude Code)};
+% \node[listtext, anchor=center, yshift=-4mm] at (agent.center) {
+%     \textbullet~Prompt orchestration \\
+%     \textbullet~Tool execution logic \\
+%     \textbullet~State management
+% };
+
+% % 3. Bottom inner box (LLM Service)
+% \node[innerbox, minimum height=1.6cm, anchor=south, yshift=2.8cm] (llm) at (main.south) {};
+% \node[boxtitle, anchor=north, yshift=-4mm] at (llm.north) {LLM Service Provider};
+% \node[boxsubtitle, anchor=north, yshift=-9mm] at (llm.north) {(OpenAI API, Local Models)};
+
+% % 4. Define boundary line positions
+% \coordinate (net_boundary_pos) at ($(agent.south)!0.5!(llm.north)$);
+% \coordinate (kern_boundary_pos) at ($(llm.south) + (0, -1.2cm)$);
+
+% % 5. Draw Network Boundary and its elements
+% \draw[boundaryline] (main.west |- net_boundary_pos) -- (main.east |- net_boundary_pos);
+% \node[boundarytext, below=1mm of net_boundary_pos] (net_text) {(TLS-encrypted traffic)};
+% \draw[vertical_arrow] ($(agent.south)+(0,-2mm)$) -- ($(net_boundary_pos)+(0,2mm)$);
+% \draw[vertical_arrow] ($(llm.north)+(0,2mm)$) -- ($(net_boundary_pos)-(0,2mm)$);
+
+% % 6. Draw Kernel Boundary and its text
+% \draw[boundaryline] (main.west |- kern_boundary_pos) -- (main.east |- kern_boundary_pos);
+% \node[boundarytext, below=1mm of kern_boundary_pos] (kern_text) {(System calls, File I/O)};
+
+% % 7. Add side labels with arrows pointing to the elements
+% \node[sidelabel, anchor=west] (app_label) at ($(agent.east) + (0.8cm, 0.2cm)$) {Application Layer};
+% \draw[<-] (app_label.west) -- ($(app_label.west) - (0.6, 0)$);
+
+% \node[sidelabel, anchor=west] (net_label) at ($(main.east |- net_boundary_pos) + (0.8cm, 0.2cm)$) {Network Boundary};
+% \node[sidelabel, anchor=north west] at (net_label.south west) {(Observable)};
+% \draw[<-] (net_label.west) -- ($(net_label.west) - (0.6, 0)$);
+
+% \node[sidelabel, anchor=west] (kern_label) at ($(main.east |- kern_boundary_pos) + (0.8cm, 0.2cm)$) {Kernel Boundary};
+% \node[sidelabel, anchor=north west] at (kern_label.south west) {(Observable)};
+% \draw[<-] (kern_label.west) -- ($(kern_label.west) - (0.6, 0)$);
+
+% \end{tikzpicture}
+
+
+% \begin{center}
+% \begin{Verbatim}[fontsize=\small, commandchars=\\\{\}]
+% ┌─────────────────────────────────────────────────┐
+% │             System Environment                  │
+% │  (Operating System, Containers, Services)       │
+% │                                                 │
+% │  ┌─────────────────────────────────────────┐   │
+% │  │      Agent Runtime Framework            │   │  ← Application Layer
+% │  │   (LangChain, AutoGen, Claude Code)     │   │
+% │  │   • Prompt, tool, memory                │   │
+% │  └─────────────────────────────────────────┘   │
+% │                    ↕                            │
+% │  ═══════════════════════════════════════════   │  ← Network Boundary
+% │           (TLS-encrypted traffic)               │     (Observable)
+% │                    ↕                            │
+% │  ┌─────────────────────────────────────────┐   │
+% │  │         LLM Service Provider            │   │
+% │  │    (OpenAI API, Local Models)           │   │
+% │  └─────────────────────────────────────────┘   │
+% │                                                 │
+% │  ═══════════════════════════════════════════   │  ← Kernel Boundary
+% │         (System calls, File I/O, process)       │     (Observable)
+% └─────────────────────────────────────────────────┘
+% \end{Verbatim}
+% \end{center}
