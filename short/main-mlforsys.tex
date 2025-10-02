@@ -1,0 +1,92 @@
+\documentclass{article}
+
+
+\usepackage{neurips_2025}
+% \usepackage[final]{neurips_2025}
+
+
+\usepackage{listings}     % For ASCII-art / code blocks
+\usepackage{booktabs}     % Nicer tables
+\usepackage{array}        % Column types
+\usepackage{tabularx}     % Automatic column width
+\usepackage{enumitem}     % Compact lists
+
+
+
+\usepackage{comment}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage[english]{babel} 
+\usepackage{url}
+\usepackage{graphicx}
+
+
+\usepackage{hyperref}       % hyperlinks
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+
+
+\input{arxivpass}
+
+
+\title{AgentSight: System-Level Observability for AI Agents Using eBPF}
+
+
+
+\author{%
+  Yusheng Zheng$^{1}$ \\
+  \texttt{yzhen165@ucsc.edu} \\
+  \And
+  Yanpeng Hu$^{2}$ \\
+  \texttt{huyp@shanghaitech.edu.cn} \\
+  \And
+  Tong Yu$^{3}$ \\
+  \texttt{yt.xyxx@gmail.com} \\
+  \And
+  Andi Quinn$^{1}$ \\
+  \texttt{aquinn1@ucsc.edu} \\
+  \And
+  \multicolumn{4}{c}{$^{1}$UC Santa Cruz, Santa Cruz, CA, USA} \\
+  \multicolumn{4}{c}{$^{2}$ShanghaiTech University, Shanghai, China} \\
+  \multicolumn{4}{c}{$^{3}$eunomia-bpf Community, China}
+}
+
+\sloppy
+\begin{document}
+
+
+\maketitle
+
+
+\begin{abstract}
+    Modern software infrastructure increasingly relies on LLM agents for development and maintenance, such as Claude Code and Gemini-cli. However, these AI agents differ fundamentally from traditional deterministic software, posing a significant challenge to conventional monitoring and debugging. This creates a critical semantic gap: existing tools observe either an agent's high-level intent (via LLM prompts) or its low-level actions (e.g., system calls), but cannot correlate these two views. This blindness makes it difficult to distinguish between benign operations, malicious attacks, and costly failures. We introduce AgentSight, an AgentOps observability framework that bridges this semantic gap using a hybrid approach. Our approach, \emph{boundary tracing}, monitors agents from outside their application code at stable system interfaces using eBPF. AgentSight intercepts TLS-encrypted LLM traffic to extract semantic intent, monitors kernel events to observe system-wide effects, and causally correlates these two streams across process boundaries using a real-time engine and secondary LLM analysis. This instrumentation-free technique is framework-agnostic, resilient to rapid API changes, and incurs less than 3\% performance overhead. Our evaluation shows AgentSight detects prompt injection attacks, identifies resource-wasting reasoning loops, and reveals hidden coordination bottlenecks in multi-agent systems. AgentSight is released as an open-source project at \url{https://github.com/eunomia-bpf/agentsight}.
+\end{abstract}
+
+
+
+\maketitle
+\pagestyle{plain}
+
+
+\input{intro}
+
+\input{bg2}
+
+\input{design-impl}
+
+\input{eval-conclusion}
+
+
+\bibliographystyle{plain}
+\bibliography{ai}
+
+
+
+
+
+
+\end{document}

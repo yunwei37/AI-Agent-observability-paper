@@ -1,0 +1,248 @@
+
+\documentclass[sigplan,screen，review,9pt]{acmart}
+\settopmatter{printacmref=false, printccs=false, printfolios=false}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+
+\usepackage{listings}     % For ASCII-art / code blocks
+\usepackage{booktabs}     % Nicer tables
+\usepackage{array}        % Column types
+\usepackage{tabularx}     % Automatic column width
+\usepackage{enumitem}     % Compact lists
+
+\usepackage{newunicodechar} % 自定义 Unicode 字符
+\usepackage{fancyvrb}   % 增强的 verbatim 环境
+
+
+
+% 定义方框字符（可选，确保正确渲染）
+\newunicodechar{┌}{\symbol{"250C}} % 上左角
+\newunicodechar{┐}{\symbol{"2510}} % 上右角
+\newunicodechar{└}{\symbol{"2514}} % 下左角
+\newunicodechar{┘}{\symbol{"2518}} % 下右角
+\newunicodechar{─}{\symbol{"2500}} % 横线
+\newunicodechar{│}{\symbol{"2502}} % 竖线
+\newunicodechar{☁}{{\fontspec{Symbola}\symbol{"2601}}} % 云朵符号
+
+\begin{document}
+
+\title{AI Agent Observability}
+
+
+\author{}
+
+
+\sloppy
+\begin{abstract}
+AI agent systems exhibit non-deterministic, evolving behaviors that render traditional application monitoring inadequate, as they require semantic observability of reasoning traces, tool interactions, and emergent failures rather than low-level metrics. Current solutions relying on framework-specific instrumentation suffer from fragility against rapid agent evolution and security vulnerabilities like prompt injection. To address this, we propose boundary tracing—a zero-instrumentation approach using eBPF to capture semantics at kernel/network interfaces, decoupling observability from agent internals. This provides tamper-resistant, framework-agnostic visibility into prompt execution, cross-agent coordination, and critical failures, bridging the semantic gap between system events and AI logic for robust auditing and debugging.
+\end{abstract}
+
+
+\maketitle
+
+
+
+\section{Problem / Gap}
+
+\subsection*{AI agents evolve rapidly and differ from traditional software.}  
+The rise of AI-powered agentic systems is transforming modern software infrastructure. Frameworks like AutoGen, LangChain, Claude Code, and gemini-cli orchestrate large language models (LLMs) to automate software engineering tasks, data analysis pipelines, and multi-agent decision-making. Unlike traditional software components that produce deterministic, easily observable behaviors, these AI-agent systems generate open-ended, non-deterministic outputs, often conditioned on hidden internal states and emergent interactions between multiple agents. Consequently, debugging and monitoring agentic software pose unprecedented observability challenges that classic application performance monitoring (APM) tools cannot address adequately.
+
+\begin{table*}[t]
+  \caption{How AI-agent observability differs from classic software observability}
+  \label{tab:diff}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{2.85cm}X X@{}}
+    \toprule
+    \textbf{Dimension} &
+    \textbf{Traditional app / micro-service} &
+    \textbf{LLM or multi-agent system} \\
+    \midrule
+    What you try to “see” &
+    Latency, errors, CPU, GC, SQL counts, request paths &
+    \emph{Semantics}—prompt / tool trace, reasoning steps, toxicity, hallucination rate, persona drift, tokens/\$ spent \\
+    Ground truth &
+    Deterministic spec: given~$X$ produce~$Y$ or raise exception &
+    Open-ended output: many acceptable~$Y$; quality judged by similarity, helpfulness, policy compliance \\
+    Failure modes &
+    Crashes, 5xx, memory leaks, deadlocks &
+    Wrong facts, infinite loops, forgotten instructions, emergent mis-coordination between agents \\
+    Time scale &
+    Millisecond spans; state usually dies at request end &
+    Dialogue and scratch memories persist for hours/days; “state’’ hides in vector DB rows and system prompts \\
+    Signal source &
+    Structured logs and metrics emitted on purpose &
+    Often \emph{inside plain-text TLS payloads}; plus tool-execution logs \\
+    Fix workflow &
+    Reproduce, attach debugger, patch code &
+    Re-prompt, fine-tune, change tool wiring, tweak guardrails—code may be fine but the “thought process’’ is wrong \\
+    Safety / audit &
+    Trace shows what code ran &
+    Need evidence of \emph{why} the model said something for compliance / incident reviews \\
+    \bottomrule
+  \end{tabularx}
+\end{table*}
+
+\subsection*{Why the Difference Matters for Research}
+\textbf{Instrumentation gap} – Agent logic and algorithm changes daily (new prompts, tools) or by itself at runtime. Relying on in-code hooks means constant churn; kernel-side or side-car tracing stays stable.
+    
+\textbf{Semantic telemetry} – We need new span attributes (``model.temp'', ``tool.role'', ``reasoning.loop\_id'') and new anomaly detectors (contradiction, persona drift).
+    
+\textbf{Causal fusion} – Research challenge: merge low-level events with high-level semantic spans into a single timeline so SREs can answer ``why my code is not work? what system is it run on and what command have you tried?''
+    
+\textbf{Tamper resistance} – If prompt-injection turns the agent malicious it may silence its own logs. Out-of-process and kernel level tracing provides an independent audit channel.
+
+In short, AI-agent observability inherits the \textbf{unreliable, emergent behaviour} of AI Agents. Treat the agent runtime as a semi-trusted black box and observe at the system boundary: that's where the opportunities lie.
+
+\subsection*{Current observability techniques rely on application-level instrumentation}
+
+Current agent observability techniques rely predominantly on application-level instrumentation—callbacks, middleware hooks, or explicit logging—integrated within each agent framework. While intuitive, this approach suffers three fundamental limitations. First, agent frameworks evolve rapidly, changing prompts, tools, workflow and memory interfaces frequently. They can even modify their self code to create new tools, change prompts and behaviors. Thus, instrumentation embedded within agent codebases incurs significant maintenance overhead. Second, agent runtimes can be tampered with or compromised (e.g., via prompt injection), allowing attackers or buggy behaviors to evade logging entirely. Fourth, application-level instrumentation cannot reliably capture cross-agent semantics, such as reasoning loops, semantic contradictions, persona shifts, or the behaviors when it's interacting with it's environment, especially when interactions cross process or binary boundaries (e.g., external tools or subprocesses).
+
+For security, consider a LLM agent first writing a bash file with malicious commands (not executed, safe), and then executing it with basic tool calls (often allowed). This requires system-wide observability and constraints.
+
+\section{AI Agent Observability Landscape}
+Below is a quick landscape scan of LLM / AI-agent observability tooling as of July 2025. Focused on offerings that (a) expose an SDK, proxy, or spec you can wire into an agent stack today and (b) ship some way to trace / evaluate / monitor model calls in production.
+
+\begin{table*}[t]
+\centering
+\scriptsize
+\begin{tabular}{p{0.5cm} p{2.2cm} p{2.3cm} p{2.8cm} p{1.8cm} p{2.5cm}}
+\toprule
+\# & Tool / SDK (year) & Integration path & What it provides & License / model & Notes \\
+\midrule
+1 & \textbf{LangSmith} (2023) & Add \texttt{import langsmith} to LangChain/LangGraph apps & Request/response traces, prompt \& token stats, evaluations & SaaS, free tier & Tight LangChain integration; OTel export beta \\
+2 & \textbf{Helicone} (2023) & Reverse-proxy or Python/JS SDK & Logs OpenAI-style calls, cost/latency dashboards & OSS (MIT) + hosted & Proxy model requires no code changes \\
+3 & \textbf{Traceloop} (2024) & One-line SDK import → OTel & OTel spans for prompts, tools, sub-calls & SaaS, free tier & Standard OTel data compatibility \\
+4 & \textbf{Arize Phoenix} (2024) & \texttt{pip install}, OpenInference tracer & Local UI + vector store for traces, automatic evals & Apache-2.0 & Includes open-source UI for debugging \\
+5 & \textbf{Langfuse} (2024) & SDK or OTel OTLP & Nested traces, cost metrics, prompt management & OSS (MIT) + cloud & Popular for RAG/multi-agent projects \\
+6 & \textbf{WhyLabs LangKit} (2023) & Text metrics wrapper & Drift, toxicity, sentiment, PII detection & Apache-2.0 core & Focuses on text-quality metrics \\
+7 & \textbf{PromptLayer} (2022) & Decorator or proxy & Prompt chain timeline, diff \& replay & SaaS & Early solution, minimal code changes \\
+8 & \textbf{Literal AI} (2024) & Python SDK + UI & RAG-aware traces, eval experiments & OSS + SaaS & Targets chatbot product teams \\
+9 & \textbf{W\&B Weave/Traces} (2024) & \texttt{import weave} or SDK & Links to W\&B projects, captures code/IO & SaaS & Integrates with existing W\&B workflows \\
+10 & \textbf{Honeycomb Gen-AI} (2024) & Send OTel spans & Heat-maps on prompt spans, latency & SaaS & Built on mature trace store \\
+11 & \textbf{OTel GenAI Conv.} (2024) & Spec + Python lib & Standard span names for models/agents & Apache-2.0 & Provides semantic conventions \\
+12 & \textbf{OpenInference} (2023) & Tracer wrapper & JSON schema for traces & Apache-2.0 & Specification (not hosted service) \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\subsection*{What the landscape tells us}
+
+\textbf{Almost everyone hooks at the SDK layer.} 11 of 12 options require you to wrap or proxy function calls. That’s fine for proof-of-concepts but breaks when an agent hot-swaps prompts or spawns new tools that bypass the wrapper.
+
+\textbf{OpenTelemetry is becoming the de-facto wire format.} Traceloop, Honeycomb, Langfuse, PromptLayer, Phoenix (via OpenInference) all speak OTel, which simplifies backend choice.
+
+\textbf{Semantic evaluation is still early.} Only Phoenix, LangSmith, Langfuse, and Literal ship built-in LLM-powered quality checks (toxicity, relevance, hallucination score). Most others focus on latency + cost.
+
+\textbf{No one does kernel-level capture.} None of the listed tools observe encrypted TLS buffers or \verb|execve()| calls directly; they trust the application layer to be honest. That leaves a blind spot for prompt-injection or self-modifying agents—exactly the gap a zero-instrumentation eBPF tracer could close.
+
+\textbf{Specs vs. platforms.} OpenTelemetry GenAI and OpenInference lower the integration tax but don’t store or visualize anything; you still need a backend. Conversely, SaaS platforms bundle storage, query, and eval but lock you into their data shape.
+
+\subsection*{How this motivates the “boundary tracing” idea}
+
+Because today’s solutions \emph{mostly} live inside the agent process, they inherit the same fragility as the agent code:
+
+\begin{itemize}
+  \item \textbf{Breakage when you tweak the prompt graph} – each new node needs a decorator.
+  \item \textbf{Evasion by malicious prompts} – compromised agent can drop or fake logs.
+  \item \textbf{Blind to cross-process side effects} – e.g., writing a shell script then \verb|execve()|-ing it.
+\end{itemize}
+
+A system-level eBPF tracer that scoops TLS write buffers and syscalls sidesteps those issues:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{p{0.45\columnwidth} p{0.45\columnwidth}}
+\toprule
+\textbf{Where today's SDKs stop} & \textbf{What boundary tracing would still see} \\
+\midrule
+Missing span when agent spawns \texttt{curl} directly & \texttt{execve("curl", ...)} + network write \\
+Agent mutates its own prompt string before logging & Raw ciphertext leaving the TLS socket \\
+Sub-process mis-uses GPU & \texttt{ioctl} + CUDA driver calls \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+In other words, existing tools solve the “what happened inside my code?” story; kernel-side tracing can answer “what actually hit the wire and the OS?”—a complementary, harder-to-tamper vantage point.
+
+That gap is wide open for research and open-source innovation.
+
+
+\section{Key Insight and Observation}
+
+All meaningful interactions traverse two clear boundaries.  
+\begin{quote}
+  AI-agent observability must be decoupled from agent internals.
+  Observing from the boundary provides a stable semantic interface.
+\end{quote}
+
+\subsection*{AI Agent struct}
+An agent-centric stack as three nested circles:
+
+
+\begin{comment}
+    
+
+\begin{center}
+    
+\begin{Verbatim}[fontsize=\small, commandchars=\\\{\}]
+┌───────────────────────────────────────────────┐
+│          ☁  Rest of workspace / system       │
+│  (APIs, DBs, message bus, OS, Kubernetes…)    │
+│                                               │
+│   ┌───────────────────────────────────────┐   │
+│   │       Agent runtime / framework       │   │
+│   │ (LangChain, claude-code, gemini-cli …)│   │
+│   │  • orchestrates prompts & tool calls  │   │
+│   │  • owns scratch memory / vector DB    │   │
+│   └───────────────────────────────────────┘   │
+│               ↑ outbound API calls            │
+│───────────────────────────────────────────────│
+│               ↓ inbound events                │
+│   ┌───────────────────────────────────────┐   │
+│   │          LLM serving provider         │   │
+│   │    (OpenAI endpoint, local llama.cpp) │   │
+│   └───────────────────────────────────────┘   │
+└───────────────────────────────────────────────┘
+\end{Verbatim}
+\end{center}
+\end{comment}
+
+
+\begin{itemize}
+  \item \textbf{LLM serving provider} – token generation, non-deterministic reasoning, chain-of-thought text that may or may not be surfaced. Most system work are around the llm serving layer.
+  \item \textbf{Agent runtime layer} – turns tasks into a sequence of LLM calls plus external tool invocations; stores transient ``memories''.
+  \item \textbf{Outside world} – OS, containers, other services.
+\end{itemize}
+
+For \textbf{observability purposes} the clean interface is usually the \emph{network boundary} (TLS write of a JSON inference request) and the system boundary (syscall / subprocess when the agent hits commands \verb|curl|, \verb|grep|).  Anything below those lines (GPU kernels, weight matrices, models) is model-inference serving territory; anything above is classic system observability tasks.  That’s why kernel-level eBPF can give you a neutral vantage: it straddles both worlds without needing library hooks.
+
+Traditional software observability is \textbf{instrumentation-first} (you insert logs, spans, and metrics into the code you write).
+
+But AI agents change their internal logic dynamically through prompts, instructions, reasoning paths, and spontaneous tool usage. This constant internal mutability means \emph{instrumentation is fragile}.
+
+By shifting observability to a stable \textbf{system-level boundary}—the kernel syscall interface, TLS buffers, network sockets—you achieve:
+
+\begin{itemize}
+  \item \textbf{Framework neutrality}: Works across all agent runtimes (LangChain, AutoGen, gemini-cli).
+  \item \textbf{Semantic stability}: C aptures prompt-level semantics without chasing framework APIs.
+  \item \textbf{Trust \& auditability}: Independent trace that can’t be easily compromised by in-agent malware.
+  \item \textbf{Universal causal graph}: Merges agent-level semantics with OS-level events into one coherent story.
+\end{itemize}
+
+
+\section*{System build}
+
+\begin{enumerate}
+  \item A zero-instrumentation observability tool for AI agent systems built entirely on \textbf{system-level tracing (eBPF)} to achieve unified semantic and operational visibility independent of the rapidly-evolving agent runtimes and frameworks.
+  \item A llm ``sidecar'' approach to detect subtle semantic anomalies (e.g., reasoning loops, contradictions, persona shifts) together with the system logs.
+\end{enumerate}
+
+\section*{Challenges}
+
+The core challenge lies in the \textbf{semantic gap} between kernel-level signals and AI agent behaviors. While eBPF can capture comprehensive system-level data with minimal overhead (typically 2-3\% CPU usage), translating this into meaningful insights about agent performance requires sophisticated correlation techniques.
+
+Another challenge is capture all prompts and interactions witrh backend server is from encrypted TLS traffic. most llm serving are using TLS to communicate with backend server, and using SSE to stream the response. Using traditional network packet capture tools like tcpdump or wireshark is not enough, because the traffic is encrypted. Proxy the traffic can be a alternative solution, but proxy solutions require explicit configuration changes to route agent traffic through the proxy, which may not work with third party applications or frameworks and can introduce additional latency and complexity.
+
+By using eBPF uprobe to hook the TLS read and write in userspace, we can capture the traffic and decrypt it.
+
+\end{document}
+
