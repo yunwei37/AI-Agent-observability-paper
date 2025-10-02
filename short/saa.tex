@@ -11,7 +11,6 @@
 
 \usepackage{newunicodechar} % Custom Unicode characters
 \usepackage{fancyvrb}   % Enhanced verbatim environment
-\usepackage{fontspec}   % For custom font symbols
 
 % Define box drawing characters (optional, ensures correct rendering)
 \newunicodechar{┌}{\symbol{"250C}} % Top-left corner
@@ -20,7 +19,6 @@
 \newunicodechar{┘}{\symbol{"2518}} % Bottom-right corner
 \newunicodechar{─}{\symbol{"2500}} % Horizontal line
 \newunicodechar{│}{\symbol{"2502}} % Vertical line
-\newunicodechar{☁}{{\fontspec{Symbola}\symbol{"2601}}} % Cloud symbol
 
 \begin{document}
 
@@ -30,12 +28,14 @@
 \email{huyp@shanghaitech.edu.cn}
 \affiliation{%
   \institution{ShanghaiTech University}
+  \country{China}
 }
 
 \author{Yusheng Zheng}
 \email{yzhen165@ucsc.edu}
 \affiliation{%
   \institution{UC Santa Cruz}
+  \country{USA}
 }
 
 
@@ -65,39 +65,36 @@ Yet despite rapid adoption in development environments, production deployment at
 
 \textbf{3. Fragmented Multi-Vendor Instrumentation.} Our code review agent's execution spans multiple administrative domains: LLM serving (OpenAI API), agent orchestration (LangChain), vector storage (Pinecone), tool execution (subprocess calls), and inter-agent communication (custom APIs). Each layer has its own SDK, logging format, and instrumentation requirements, creating incompatible telemetry silos. When the security agent coordination fails, debugging requires correlating logs across five different systems with no unified trace.
 
-\begin{table*}[t]
-  \caption{How AI agent observability differs from classic software observability}
+\begin{table}[t]
+  \caption{Traditional vs. Agent Observability: A Comparative Framework}
   \label{tab:diff}
-  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{2.85cm}X X@{}}
+  \begin{tabular}{@{}p{3.2cm}p{4.2cm}p{4.2cm}@{}}
     \toprule
-    \textbf{Dimension} &
-    \textbf{Traditional app / micro-service} &
-    \textbf{LLM or multi-agent system} \\
+    \textbf{Aspect} &
+    \textbf{Traditional Observability} &
+    \textbf{AI Agent Observability} \\
     \midrule
-    What you try to “see” &
-    Latency, errors, CPU, GC, SQL counts, request paths &
-    \emph{Semantics}—prompt / tool trace, reasoning steps, toxicity, hallucination rate, persona drift, tokens/\$ spent \\
-    Ground truth &
-    Deterministic spec: given~$X$ produce~$Y$ or raise exception &
-    Open-ended output: many acceptable~$Y$; quality judged by similarity, helpfulness, policy compliance \\
-    Failure modes &
-    Crashes, 5xx, memory leaks, deadlocks &
-    Wrong facts, infinite loops, forgotten instructions, emergent mis-coordination between agents \\
-    Time scale &
-    Millisecond spans; state usually dies at request end &
-    Dialogue and scratch memories persist for hours/days; “state’’ hides in vector DB rows and system prompts \\
-    Signal source &
-    Structured logs and metrics emitted on purpose &
-    Often \emph{inside plain-text TLS payloads}; plus tool-execution logs \\
-    Fix workflow &
-    Reproduce, attach debugger, patch code &
-    Re-prompt, fine-tune, change tool wiring, tweak guardrails—code may be fine but the “thought process’’ is wrong \\
-    Safety / audit &
-    Trace shows what code ran &
-    Need evidence of \emph{why} the model said something for compliance / incident reviews \\
+    Primary Goal &
+    System health \& performance &
+    Behavioral correctness, safety, \& trust \\
+    Core Pillars &
+    Metrics, Events, Logs, Traces (MELT) &
+    MELT + \textbf{Evaluations} + \textbf{Governance} \\
+    Nature of Failures &
+    Crashes, exceptions, latency spikes &
+    ``Quiet failures'' (hallucinations, flawed logic, misuse of tools) \\
+    System Behavior &
+    Deterministic \& predictable &
+    Non-deterministic \& emergent \\
+    Key Question &
+    ``Is the system working?'' &
+    ``Is the system thinking correctly and acting appropriately?'' \\
+    Core Unit of Analysis &
+    Service/request trace &
+    Agent decision path/trajectory graph \\
     \bottomrule
-  \end{tabularx}
-\end{table*}
+  \end{tabular}
+\end{table}
 
 \subsection{Why Existing Observability Paradigms Cannot Scale}
 
