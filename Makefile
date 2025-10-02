@@ -2,6 +2,7 @@
 
 # Main document name (without .tex extension)
 MAIN = main
+SHORT = short/saa
 
 # LaTeX compiler
 LATEX = xelatex
@@ -35,4 +36,11 @@ cleanall: clean
 # Force recompilation
 force: clean all
 
-.PHONY: all clean cleanall force
+# Short paper compilation
+short: $(SHORT).pdf
+
+$(SHORT).pdf: $(SHORT).tex
+	cd short && $(LATEX) $(LATEXFLAGS) saa.tex
+	cd short && $(LATEX) $(LATEXFLAGS) saa.tex
+
+.PHONY: all clean cleanall force short
