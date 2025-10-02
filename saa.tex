@@ -133,18 +133,18 @@ We surveyed agentic observability tooling as of early 2025, examining both indus
 \toprule
 \# & Tool / SDK (year) & Integration path & What it provides & License / model & Notes \\
 \midrule
-1 & \textbf{LangSmith} (2023) & Add \texttt{import langsmith} to LangChain/LangGraph apps & Request/response traces, prompt \& token stats, evaluations & SaaS, free tier & Tight LangChain integration; OTel export beta \\
-2 & \textbf{Helicone} (2023) & Reverse-proxy or Python/JS SDK & Logs OpenAI-style calls, cost/latency dashboards & OSS (MIT) + hosted & Proxy model requires no code changes \\
-3 & \textbf{Traceloop} (2024) & One-line SDK import → OTel & OTel spans for prompts, tools, sub-calls & SaaS, free tier & Standard OTel data compatibility \\
-4 & \textbf{Arize Phoenix} (2024) & \texttt{pip install}, OpenInference tracer & Local UI + vector store for traces, automatic evals & Apache-2.0 & Includes open-source UI for debugging \\
-5 & \textbf{Langfuse} (2024) & SDK or OTel OTLP & Nested traces, cost metrics, prompt management & OSS (MIT) + cloud & Popular for RAG/multi-agent projects \\
-6 & \textbf{WhyLabs LangKit} (2023) & Text metrics wrapper & Drift, toxicity, sentiment, PII detection & Apache-2.0 core & Focuses on text-quality metrics \\
-7 & \textbf{PromptLayer} (2022) & Decorator or proxy & Prompt chain timeline, diff \& replay & SaaS & Early solution, minimal code changes \\
-8 & \textbf{Literal AI} (2024) & Python SDK + UI & RAG-aware traces, eval experiments & OSS + SaaS & Targets chatbot product teams \\
-9 & \textbf{W\&B Weave/Traces} (2024) & \texttt{import weave} or SDK & Links to W\&B projects, captures code/IO & SaaS & Integrates with existing W\&B workflows \\
-10 & \textbf{Honeycomb Gen-AI} (2024) & Send OTel spans & Heat-maps on prompt spans, latency & SaaS & Built on mature trace store \\
-11 & \textbf{OTel GenAI Conv.} (2024) & Spec + Python lib & Standard span names for models/agents & Apache-2.0 & Provides semantic conventions \\
-12 & \textbf{OpenInference} (2023) & Tracer wrapper & JSON schema for traces & Apache-2.0 & Specification (not hosted service) \\
+1 & \textbf{LangSmith}~\cite{langsmith} (2023) & Add \texttt{import langsmith} to LangChain/LangGraph apps & Request/response traces, prompt \& token stats, evaluations & SaaS, free tier & Tight LangChain integration; OTel export beta \\
+2 & \textbf{Helicone}~\cite{helicone} (2023) & Reverse-proxy or Python/JS SDK & Logs OpenAI-style calls, cost/latency dashboards & OSS (MIT) + hosted & Proxy model requires no code changes \\
+3 & \textbf{Traceloop}~\cite{traceloop} (2024) & One-line SDK import → OTel & OTel spans for prompts, tools, sub-calls & SaaS, free tier & Standard OTel data compatibility \\
+4 & \textbf{Arize Phoenix}~\cite{phoenix} (2024) & \texttt{pip install}, OpenInference tracer & Local UI + vector store for traces, automatic evals & Apache-2.0 & Includes open-source UI for debugging \\
+5 & \textbf{Langfuse}~\cite{langfuse} (2024) & SDK or OTel OTLP & Nested traces, cost metrics, prompt management & OSS (MIT) + cloud & Popular for RAG/multi-agent projects \\
+6 & \textbf{WhyLabs LangKit}~\cite{whylabs} (2023) & Text metrics wrapper & Drift, toxicity, sentiment, PII detection & Apache-2.0 core & Focuses on text-quality metrics \\
+7 & \textbf{PromptLayer}~\cite{promptlayer} (2022) & Decorator or proxy & Prompt chain timeline, diff \& replay & SaaS & Early solution, minimal code changes \\
+8 & \textbf{Literal AI}~\cite{literalai} (2024) & Python SDK + UI & RAG-aware traces, eval experiments & OSS + SaaS & Targets chatbot product teams \\
+9 & \textbf{W\&B Weave/Traces}~\cite{wandb} (2024) & \texttt{import weave} or SDK & Links to W\&B projects, captures code/IO & SaaS & Integrates with existing W\&B workflows \\
+10 & \textbf{Honeycomb Gen-AI}~\cite{honeycomb} (2024) & Send OTel spans & Heat-maps on prompt spans, latency & SaaS & Built on mature trace store \\
+11 & \textbf{OTel GenAI Conv.}~\cite{otelgenai} (2024) & Spec + Python lib & Standard span names for models/agents & Apache-2.0 & Provides semantic conventions \\
+12 & \textbf{OpenInference}~\cite{openinference} (2023) & Tracer wrapper & JSON schema for traces & Apache-2.0 & Specification (not hosted service) \\
 \bottomrule
 \end{tabular}
 \end{table*}
