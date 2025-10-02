@@ -1,5 +1,5 @@
 
-\documentclass[sigplan,screen，review,9pt]{acmart}
+\documentclass[sigplan,screen,review,9pt]{acmart}
 \settopmatter{printacmref=false, printccs=false, printfolios=false}
 \renewcommand\footnotetextcopyrightpermission[1]{}
 
@@ -9,19 +9,18 @@
 \usepackage{tabularx}     % Automatic column width
 \usepackage{enumitem}     % Compact lists
 
-\usepackage{newunicodechar} % 自定义 Unicode 字符
-\usepackage{fancyvrb}   % 增强的 verbatim 环境
+\usepackage{newunicodechar} % Custom Unicode characters
+\usepackage{fancyvrb}   % Enhanced verbatim environment
+\usepackage{fontspec}   % For custom font symbols
 
-
-
-% 定义方框字符（可选，确保正确渲染）
-\newunicodechar{┌}{\symbol{"250C}} % 上左角
-\newunicodechar{┐}{\symbol{"2510}} % 上右角
-\newunicodechar{└}{\symbol{"2514}} % 下左角
-\newunicodechar{┘}{\symbol{"2518}} % 下右角
-\newunicodechar{─}{\symbol{"2500}} % 横线
-\newunicodechar{│}{\symbol{"2502}} % 竖线
-\newunicodechar{☁}{{\fontspec{Symbola}\symbol{"2601}}} % 云朵符号
+% Define box drawing characters (optional, ensures correct rendering)
+\newunicodechar{┌}{\symbol{"250C}} % Top-left corner
+\newunicodechar{┐}{\symbol{"2510}} % Top-right corner
+\newunicodechar{└}{\symbol{"2514}} % Bottom-left corner
+\newunicodechar{┘}{\symbol{"2518}} % Bottom-right corner
+\newunicodechar{─}{\symbol{"2500}} % Horizontal line
+\newunicodechar{│}{\symbol{"2502}} % Vertical line
+\newunicodechar{☁}{{\fontspec{Symbola}\symbol{"2601}}} % Cloud symbol
 
 \begin{document}
 
@@ -33,7 +32,7 @@
 
 \sloppy
 \begin{abstract}
-AI agent systems are transforming software infrastructure, yet their large-scale deployment faces critical challenges: non-deterministic failures from complex reasoning, prohibitive costs across multi-layer execution stacks, and severe fragmentation from heterogeneous vendor ecosystems. Current observability approaches—traditional APM, model-centric LLM monitoring, and framework-specific instrumentation—fail to address these challenges, creating brittle, insecure monitoring with isolated SDK silos. We argue that scalable agent observability requires a fundamental architectural shift: (1) a unified, zero-instrumentation Data Plane that captures semantics at stable system boundaries across all software layers, and (2) an autonomous Cognitive Plane where specialized agents observe and manage other agents. This vision addresses the unique demands of agent systems while providing a foundation for secure, cost-effective, and semantically-aware observability at scale.
+AI agent systems are transforming software infrastructure, yet their large-scale deployment faces critical challenges: non-deterministic failures from complex reasoning, prohibitive costs across multi-layer execution stacks, and severe fragmentation from heterogeneous vendor ecosystems. Current observability approaches—traditional APM, model-centric LLM monitoring, and framework-specific instrumentation—fail to address these challenges, creating brittle monitoring with isolated SDK silos that introduce security vulnerabilities. We argue that scalable agent observability requires a fundamental architectural shift: (1) a unified, zero-instrumentation Data Plane that captures semantics at stable system boundaries across all software layers, and (2) an autonomous Cognitive Plane where specialized agents observe and manage other agents. This vision addresses the unique demands of agent systems while providing a foundation for secure, cost-effective, and semantically-aware observability at scale.
 \end{abstract}
 
 
@@ -41,20 +40,20 @@ AI agent systems are transforming software infrastructure, yet their large-scale
 
 
 
-\section{Introduction: The Imperative for Large-Scale Agent Observability}
+\section{The Deployment Crisis: Why a New Observability Paradigm is Imperative}
 
-\subsection{The Current State of AI Agent Deployment}
+\subsection{The Rise of Agentic Systems and the Production Bottleneck}
 
 The rise of AI-powered agentic systems is transforming modern software infrastructure~\cite{wang2024survey,guo2024survey}. Frameworks like AutoGen~\cite{autogen}, LangChain~\cite{langchain}, Claude Code~\cite{claudecode}, and gemini-cli~\cite{geminicli} orchestrate large language models (LLMs) to automate software engineering tasks, data analysis pipelines, and multi-agent decision-making~\cite{tran2025survey}. However, their large-scale production deployment faces three fundamental challenges that existing observability paradigms cannot address:
 
-\textbf{1. Non-determinism and Complexity Lead to Security Risks.} Unlike traditional software components that produce deterministic, easily observable behaviors, AI-agent systems generate open-ended, non-deterministic outputs, often conditioned on hidden internal states and emergent interactions between multiple agents. This creates novel failure modes: wrong facts, infinite reasoning loops~\cite{zhang2024breakingagents}, forgotten instructions, and emergent mis-coordination between agents. More critically, agents can be compromised via prompt injection attacks~\cite{indirect-prompt-inject}, potentially evading their own logging mechanisms to hide malicious behavior. Traditional crash dumps and error logs are insufficient—we need semantic traces of \emph{why} an agent made a decision, not just \emph{what} it executed.
+\textbf{1. Non-determinism and Complexity Lead to Security Risks.} Unlike traditional software components that produce deterministic, easily observable behaviors, AI agent systems generate open-ended, non-deterministic outputs, often conditioned on hidden internal states and emergent interactions between multiple agents. This creates novel failure modes: wrong facts, infinite reasoning loops~\cite{zhang2024breakingagents}, forgotten instructions, and emergent mis-coordination between agents. More critically, agents can be compromised via prompt injection attacks~\cite{indirect-prompt-inject}, potentially evading their own logging mechanisms to hide malicious behavior. Traditional crash dumps and error logs are insufficient—we need semantic traces of \emph{why} an agent made a decision, not just \emph{what} it executed.
 
 \textbf{2. Multi-Layer Execution Stacks Incur Prohibitive Costs.} Agent systems span multiple expensive layers: LLM inference (token generation), reasoning frameworks (chain-of-thought processing), tool execution (API calls, subprocess spawning), and persistent memory (vector databases). Each layer contributes to operational costs, yet current observability solutions provide no unified view to optimize spending. Cost overruns from runaway reasoning loops, redundant API calls, or inefficient tool usage remain invisible until billing alerts trigger—far too late for real-time intervention.
 
 \textbf{3. Extreme Fragmentation Across a Multi-Vendor Ecosystem.} Modern agent deployments are radically decentralized: LLM serving is managed by SaaS providers (OpenAI, Anthropic), agent logic by application developers, execution environments by infrastructure teams, and tools (e.g., MCP servers) by third-party vendors. Each stakeholder instruments their layer independently, creating a fragmented observability landscape of incompatible SDKs, proprietary formats, and security vulnerabilities. This "SDK hell" makes end-to-end debugging nearly impossible and introduces attack surfaces at every integration point.
 
 \begin{table*}[t]
-  \caption{How AI-agent observability differs from classic software observability}
+  \caption{How AI agent observability differs from classic software observability}
   \label{tab:diff}
   \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{2.85cm}X X@{}}
     \toprule
@@ -87,39 +86,47 @@ The rise of AI-powered agentic systems is transforming modern software infrastru
   \end{tabularx}
 \end{table*}
 
-\subsection{Defining the Domain: What Agent Observability Is NOT}
+\subsection{A New Class of Failure: Defining the Agent Observability Domain}
 
 To understand what scalable agent observability requires, we must first distinguish it from three related but fundamentally different domains:
 
-\textbf{Not Traditional APM.} Classic application performance monitoring (APM) tools like Datadog and New Relic are designed for deterministic systems with well-defined failure modes (crashes, 5xx errors, memory leaks). AI agents, by contrast, fail \emph{semantically}—they produce plausible but incorrect outputs, enter infinite reasoning loops, or exhibit persona drift. Traditional metrics (CPU, latency, error rates) cannot capture these failure modes. We need semantic observability: tracking prompt evolution, tool interaction patterns, and the causal chain from user intent to agent decision.
+\textbf{Traditional APM Falls Short.} Classic application performance monitoring (APM) tools like Datadog and New Relic are designed for deterministic systems with well-defined failure modes (crashes, 5xx errors, memory leaks). AI agents, by contrast, fail \emph{semantically}—they produce plausible but incorrect outputs, enter infinite reasoning loops, or exhibit persona drift. Traditional metrics (CPU, latency, error rates) cannot capture these failure modes. We need semantic observability: tracking prompt evolution, tool interaction patterns, and the causal chain from user intent to agent decision.
 
-\textbf{Not LLM-Centric Monitoring.} Existing LLM monitoring solutions (e.g., prompt safety filters, hallucination detectors) focus on single-turn model interactions and are inherently \emph{model-centric}. They operate at the inference endpoint, monitoring token generation and output quality. Agent observability, however, must be \emph{process-centric}, tracking multi-step reasoning trajectories, tool orchestration, cross-agent coordination, and long-lived state (vector databases, scratch memory). The observability scope extends far beyond the model boundary to encompass the entire autonomous decision-making process.
+\textbf{LLM-Centric Monitoring Is Insufficient.} Existing LLM monitoring solutions (e.g., prompt safety filters, hallucination detectors) focus on single-turn model interactions and are inherently \emph{model-centric}. They operate at the inference endpoint, monitoring token generation and output quality. Agent observability, however, must be \emph{process-centric}, tracking multi-step reasoning trajectories, tool orchestration, cross-agent coordination, and long-lived state (vector databases, scratch memory). The observability scope extends far beyond the model boundary to encompass the entire autonomous decision-making process.
 
-\textbf{Not LLM Serving Observability.} LLM serving platforms prioritize operational efficiency: throughput, latency percentiles, SLO compliance, and resource utilization (GPU, memory). This is infrastructure observability for the inference layer. Agent observability, conversely, must reason about \emph{behavioral correctness}: did the agent follow instructions, use tools appropriately, coordinate effectively with other agents, and achieve its goal within cost constraints? These are semantic properties orthogonal to serving metrics.
+\textbf{LLM Serving Observability Addresses Different Concerns.} LLM serving platforms prioritize operational efficiency: throughput, latency percentiles, SLO compliance, and resource utilization (GPU, memory). This is infrastructure observability for the inference layer. Agent observability, conversely, must reason about \emph{behavioral correctness}: did the agent follow instructions, use tools appropriately, coordinate effectively with other agents, and achieve its goal within cost constraints? These are semantic properties orthogonal to serving metrics.
 
-\subsection{Why the Difference Matters for Research}
+\subsection{The Instrumentation Gap and the Semantic Gap}
 
-\textbf{Instrumentation gap} – Agent logic and algorithm changes daily (new prompts, tools) or by itself at runtime. Relying on in-code hooks means constant churn; system-boundary tracing stays stable.
+The unique characteristics of agent systems create two fundamental observability challenges that current approaches cannot address:
 
-\textbf{Semantic telemetry} – We need new span attributes (``model.temp'', ``tool.role'', ``reasoning.loop\_id'') and new anomaly detectors (contradiction, persona drift).
+\textbf{The Instrumentation Gap.} Agent logic evolves rapidly—new prompts, tools, and workflows emerge daily, and agents can even modify their own code at runtime. Relying on in-code hooks means constant maintenance churn as frameworks update and agent behaviors shift. Worse, agents compromised via prompt injection~\cite{indirect-prompt-inject} can silence or falsify their own logs. System-boundary tracing, by contrast, remains stable and tamper-resistant regardless of internal agent changes.
 
-\textbf{Causal fusion} – Research challenge: merge low-level events with high-level semantic spans into a single timeline so SREs can answer ``why my code is not work? what system is it run on and what command have you tried?''
+\textbf{The Semantic Gap.} Traditional observability captures \emph{what} happened (syscalls, network requests), but agent failures require understanding \emph{why}—the reasoning chain from user intent to agent decision. We need new telemetry primitives: span attributes like \texttt{model.temp}, \texttt{reasoning.loop\_id}, and \texttt{tool.coordination.pattern}, plus anomaly detectors for semantic failures (contradictions, persona drift, instruction forgetting). The research challenge is fusing low-level system events with high-level semantic spans into a coherent causal timeline.
 
-\textbf{Tamper resistance} – If prompt-injection turns the agent malicious it may silence its own logs. Out-of-process and kernel level tracing provides an independent audit channel.
+In short, AI agent observability inherits the \textbf{unreliable, emergent behavior} of AI agents themselves. The solution: treat the agent runtime as a semi-trusted black box and observe at stable system boundaries where opportunities for tamper-proof, semantically-rich telemetry converge.
 
-In short, AI-agent observability inherits the \textbf{unreliable, emergent behaviour} of AI Agents. Treat the agent runtime as a semi-trusted black box and observe at the system boundary: that's where the opportunities lie.
+\section{A Landscape Analysis of Current Solutions}
 
-\section{Survey: The Current Observability Landscape}
+Having established the unique challenges of agent observability, we now examine how existing solutions attempt to address them—and where they fall short.
 
-\subsection{The Fragmentation Problem}
+\subsection{The Prevailing Paradigm: Application-Layer Instrumentation}
 
-Current agent observability techniques rely predominantly on application-level instrumentation—callbacks, middleware hooks, or explicit logging—integrated within each agent framework. While intuitive, this approach suffers three fundamental limitations. First, agent frameworks evolve rapidly, changing prompts, tools, workflow and memory interfaces frequently. They can even modify their self code to create new tools, change prompts and behaviors. Thus, instrumentation embedded within agent codebases incurs significant maintenance overhead. Second, agent runtimes can be tampered with or compromised (e.g., via prompt injection), allowing attackers or buggy behaviors to evade logging entirely. Fourth, application-level instrumentation cannot reliably capture cross-agent semantics, such as reasoning loops, semantic contradictions, persona shifts, or the behaviors when it's interacting with it's environment, especially when interactions cross process or binary boundaries (e.g., external tools or subprocesses).
+Current agent observability techniques rely predominantly on application-level instrumentation—callbacks, middleware hooks, or explicit logging—integrated within each agent framework. While intuitive, this approach suffers three fundamental limitations:
 
-For security, consider a LLM agent first writing a bash file with malicious commands (not executed, safe), and then executing it with basic tool calls (often allowed). This requires system-wide observability and constraints.
+\begin{enumerate}[leftmargin=*, itemsep=2pt]
+  \item \textbf{High maintenance overhead}: Agent frameworks evolve rapidly, changing prompts, tools, workflow and memory interfaces frequently. They can even modify their own code to create new tools, change prompts and behaviors. Instrumentation embedded within agent codebases thus incurs significant maintenance burden.
 
-\subsection{Industrial and Open-Source Solutions}
+  \item \textbf{Evasion vulnerability}: Agent runtimes can be tampered with or compromised (e.g., via prompt injection), allowing attackers or buggy behaviors to evade logging entirely.
 
-Below is a comprehensive landscape scan of LLM / AI-agent observability tooling as of 2025, focusing on offerings that (a) expose an SDK, proxy, or spec you can wire into an agent stack today and (b) ship some way to trace / evaluate / monitor model calls in production.
+  \item \textbf{Cross-boundary blindness}: Application-level instrumentation cannot reliably capture cross-agent semantics, such as reasoning loops, semantic contradictions, persona shifts, or behaviors when interacting with the environment, especially when interactions cross process or binary boundaries (e.g., external tools or subprocesses).
+\end{enumerate}
+
+For security, consider an LLM agent first writing a bash file with malicious commands (not executed, safe), and then executing it with basic tool calls (often allowed). This requires system-wide observability and constraints.
+
+\subsection{A Survey of the Ecosystem}
+
+This subsection provides a comprehensive landscape scan of LLM/AI agent observability tooling as of 2025, focusing on offerings that (a) expose an SDK, proxy, or spec you can wire into an agent stack today and (b) ship some way to trace, evaluate, or monitor model calls in production. Table 2 summarizes key industrial and open-source solutions.
 
 \begin{table*}[t]
 \centering
@@ -144,7 +151,7 @@ Below is a comprehensive landscape scan of LLM / AI-agent observability tooling 
 \end{tabular}
 \end{table*}
 
-\subsection{Critique: The SDK Fragmentation Crisis}
+\subsection{Critique of the Status Quo: The Fragmentation Crisis}
 
 Analysis of the current landscape reveals five critical insights:
 
@@ -158,7 +165,7 @@ Analysis of the current landscape reveals five critical insights:
 
 \textbf{5. Specs vs. Platforms: The Integration Tax.} OpenTelemetry GenAI and OpenInference provide data models but no storage or visualization—requiring additional backend integration. Conversely, SaaS platforms (Datadog, LangSmith) bundle the full stack but impose vendor lock-in through proprietary schemas and APIs.
 
-\subsection{The Motivation for System-Level Observability}
+\subsection{The Inescapable Conclusion: The Need for System-Level Observability}
 
 Because current solutions live \emph{inside} the agent process, they inherit its fragility:
 
@@ -168,14 +175,14 @@ Because current solutions live \emph{inside} the agent process, they inherit its
   \item \textbf{Blind to cross-process interactions} – Cannot see shell script execution, subprocess coordination, or external tool invocation.
 \end{itemize}
 
-System-level tracing at kernel and network boundaries addresses these gaps:
+System-level tracing at kernel and network boundaries addresses these gaps. Table 3 illustrates where SDK-based instrumentation fails and how boundary tracing provides complementary visibility:
 
 \begin{table}[h]
 \centering
 \small
 \begin{tabular}{p{0.45\columnwidth} p{0.45\columnwidth}}
 \toprule
-\textbf{Where today's SDKs stop} & \textbf{What boundary tracing would still see} \\
+\textbf{Where today's SDKs stop} & \textbf{What boundary tracing sees} \\
 \midrule
 Missing span when agent spawns \texttt{curl} directly & \texttt{execve("curl", ...)} + network write \\
 Agent mutates its own prompt string before logging & Raw ciphertext leaving the TLS socket \\
@@ -184,11 +191,9 @@ Sub-process mis-uses GPU & \texttt{ioctl} + CUDA driver calls \\
 \end{tabular}
 \end{table}
 
-In other words, existing tools solve the "what happened inside my code?" story; system-level tracing can answer "what actually hit the wire and the OS?"—a complementary, harder-to-tamper vantage point.
+Existing tools solve the "what happened inside my code?" question; system-level tracing answers "what actually hit the wire and the OS?"—a complementary, harder-to-tamper vantage point. This gap represents a critical research opportunity and motivates the architectural vision we present in Section 3.
 
-This gap represents a critical research opportunity for the community.
-
-\section{Vision: A Two-Plane Architecture for Scalable Agent Observability}
+\section{A Vision for a New Architecture: The Two-Plane Model}
 
 Given the deployment challenges (security, cost, fragmentation) and the inadequacy of current solutions, we propose a fundamental architectural shift. Scalable agent observability requires two integrated layers:
 
