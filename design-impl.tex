@@ -3,6 +3,16 @@
 
 The design of AgentSight is guided by a single imperative: to bridge the semantic gap between an agent's intent and its actions. We achieve this through a novel observability method, boundary tracing, realized by a multi-signal correlation engine.
 
+\subsection{Challenges}
+
+The emergent and non-deterministic nature of AI agents fundamentally breaks traditional program observability paradigms, introducing two core challenges that original observability cannot address.
+
+\textbf{Bridging the Semantic Gap Between Intent and Action}
+The first and most significant challenge is bridging the vast semantic gap between an agent's high-level \textit{intent} and its low-level system \textit{actions}. Unlike conventional software, where intent is encoded in predictable source code, an agent's intent is expressed in natural language and interpreted by an LLM, creating dynamic "source code" that is generated at runtime. Consequently, it is impossible for a static analyzer to determine what an agent will do. For example, the intent "find and fix the bug in the authentication module" is semantically rich but operationally ambiguous, potentially resulting in a complex sequence of actions like reading files (\texttt{openat2}), compiling code (\texttt{execve} -> \texttt{gcc}), and running tests (\texttt{execve} -> \texttt{python}). This creates a critical observability problem: how can a monitoring system verify that the cascade of system calls is a legitimate fulfillment of the natural language intent? To solve this, an observer must move beyond simple pattern matching to gain a semantic understanding of the agent's goal, necessitating a new, llm based approach to interpret the correlated traces.
+
+\textbf{Isolating the Causal Signal from High-Volume System Noise}
+The second challenge stems from the agent's autonomy to use any tool necessary to achieve its goal, leading to an unpredictable and high-volume stream of system events. An agent might spawn shells, download scripts, or invoke compilers-processes that are not known ahead of time. This makes it exceedingly difficult to distinguish the agent's specific activity (the "signal") from the background noise of the operating system. Static, pre-configured filters, for instance, a rule to only monitor \texttt{git} commands, are inherently brittle and will fail the moment the agent uses \texttt{curl} and \texttt{bash} to achieve a similar outcome. Our design addresses this with an aggressive, dynamic in-kernel eBPF filter. By tracking process creation events (\texttt{fork}, \texttt{execve}), the filter builds a complete lineage tree of the agent's activity and dynamically applies rules in the kernel to only pass events from the agent or its descendants to userspace. This approach ensures that the entire causal chain is captured efficiently at the source, dramatically reducing overhead and providing a clean, high-fidelity signal for correlation and analysis.
+
 \subsection{Boundary Tracing: A Principled Approach}
 
 Our key insight is that all agent interactions must traverse well-defined and stable system boundaries: the kernel for system operations and the network for external communications with LLM serving backends (Figure \ref{fig:agent}). By monitoring at these boundaries rather than within volatile agent code, we achieve comprehensive monitoring independent of implementation details. This approach enables Semantic Correlation, the ability to causally link high-level intentions with low-level system events. This is supported by two principles. First is Comprehensiveness, as kernel-level monitoring ensures no system action from process creation to file I/O goes unobserved, even across spawned subprocesses. Second is Stability, since system call ABIs and network protocols evolve far more slowly than agent frameworks, providing a durable, future-proof solution. This paradigm shifts the trust model from assuming a cooperative agent to enforcing observation at tamper-proof boundaries.
@@ -12,7 +22,7 @@ Our key insight is that all agent interactions must traverse well-defined and st
     % It is highly recommended to create this diagram using a tool like TikZ, Inkscape, or another vector graphics editor for the final paper.
     % The following is a LaTeX description of the recommended figure.
     \includegraphics[width=\columnwidth]{figture/agent.png}
-    \caption{agent framwork overview}
+    \caption{Agent Framework Overview}
     \label{fig:agent}
 \end{figure}
 
@@ -29,9 +39,9 @@ AgentSight's architecture simultaneously taps into the two critical boundaries. 
     \label{fig:architecture}
 \end{figure}
 
-Several key compnents enable AgentSight to effectively bridge the semantic gap:
+Several key components enable AgentSight to effectively bridge the semantic gap:
 
-\textbf{eBPF for Safe, Unified Probing:} We chose eBPF for its production safety, high performance, and unified ability to access both userspace and kernel data streams. Our design intercepts decrypted data from the agent's interation with LLM serving backend, which is more efficient and manageable than network-level packet capture or proxy-based solutions.
+\textbf{eBPF for Safe, Unified Probing:} We chose eBPF for its production safety, high performance, and unified ability to access both userspace and kernel data streams. Our design intercepts decrypted data from the agent's interaction with LLM serving backend, which is more efficient and manageable than network-level packet capture or proxy-based solutions.
 
 \textbf{Multi-Signal Causal Correlation Engine:} The core of our design is a correlation strategy that establishes causality between intent and action. We designed a multi-signal engine that relies on three key mechanisms: Process Lineage, which builds a complete process tree by tracking \texttt{fork} and \texttt{execve} events to link actions in child processes back to the parent agent; Temporal Proximity, which associates actions that occur within a narrow time window immediately following an LLM response; and Argument Matching, which directly matches content from LLM responses, such as filenames, URLs, or commands, with the arguments of subsequent system calls. Together, these signals enable AgentSight to definitively establish causal relationships between high-level intentions and low-level system operations across process boundaries.
 

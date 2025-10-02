@@ -19,7 +19,7 @@ Repo Compilation & 92.40 & 92.72 & 0.4\% \\
 \end{tabular}
 \end{table}
 
- We evaluated AgentSight on a server (Ubuntu 22.04, Linux 6.14.0) using Claude Code 1.0.62 as the test agent. The benchmarks focused on three real-world developer workflows using a tutorial repo\cite{ebpftutorial}: repository understanding with the \texttt{/init} command, code generation for bpftrace scripts, and full repository compilation with parallel builds. Each experiment was run 3 times with and without AgentSight to measure runtime overhead.
+ We evaluated AgentSight on a server (Ubuntu 22.04, Linux 6.14.0) using Claude Code 1.0.62\cite{claudecode} with claude 4 as the test agent. The benchmarks focused on three real-world developer workflows using a tutorial repo\cite{ebpftutorial}: repository understanding with the \texttt{/init} command, code generation for bpftrace scripts, and full repository compilation with parallel builds. Each experiment was run 3 times with and without AgentSight to measure runtime overhead.
 Table~\ref{tab:build-overhead} quantifies the runtime overhead of AgentSight across three developer workflows, with a average 2.9\% overhead.  
 
 \subsection{Case Studies}
@@ -28,15 +28,17 @@ We evaluated AgentSight's effectiveness through case studies that demonstrate it
 
 \subsubsection{Case Study 1: Detecting Prompt Injection Attacks}
 
-We tested AgentSight's ability to detect indirect prompt injection attacks\cite{indirect-prompt-inject}. In our test, a data analysis agent received a crafted prompt that embedded malicious commands within a legitimate request, ultimately causing it to exfiltrate `/etc/passwd`. AgentSight captured the complete attack chain: from the initial LLM interaction with the suspicious webpage to the final sensitive file read, including the intermediate subprocess spawn and outbound connection. The correlated event trace was passed to our observer LLM for analysis, which returned a high-confidence attack score (5/5). The LLM's analysis concluded that the agent's actions, executing a shell command to read `/etc/passwd` and connecting to a non-corporate domain, were logically inconsistent with its stated "analyze sales data" goal, identifying a classic data exfiltration pattern from a successful prompt injection. This demonstrates how combining intent and action provides actionable, context-aware detection.
+We tested AgentSight's ability to detect indirect prompt injection attacks\cite{indirect-prompt-inject}. In our test, a software development agent is instructed to clone and build a C project. The project's README file directed the agent to a URL serving HTML with a hidden prompt. This prompt made the agent read and send /etc/passwd to a collection server, using a command cleverly disguised as a necessary step in the build process. AgentSight captured the full correlated attack chain: from the initial URL fetch to the final network exfiltration, with 521 events and merged into 37 events by  Correlation Engine. The observer LLM analyzed this trace, returned a high-confidence attack score, and concluded that the agent's actions were logically inconsistent with its stated goal. This result demonstrates how causally linking intent to system-level actions provides effective, context-aware threat detection.
 
 \subsubsection{Case Study 2: Reasoning Loop Detection}
 
-An agent attempting a complex task entered an infinite loop due to a common tool usage error. It repeatedly called a command-line tool with incorrect arguments, received an error, but then failed to correct its mistake, retrying the exact same failing command. AgentSight's real-time monitors detect this anomalous resource consumption from a trace of 12 API calls and passed it to the observer LLM. The LLM identified the root cause as a persistent tool error, noting the agent was caught in a "try-fail-re-reason" loop; it executed the same failing command, passed the identical error back to the reasoning LLM, and failed to learn from the tool's output. The system triggered an alert after three complete cycles, a configurable threshold, where the agent had already consumed 4,800 tokens. This intervention prevented further resource waste and service degradation, saving an estimated \$2.40 in API cost, and highlighted the importance of semantic-aware monitoring.
+An agent attempting a complex task may enter an infinite loop due to a common tool usage error\cite{zhang2024breakingagents}
+. We implement a research agent using crewai\cite{crewai} with gpt-4o-mini\cite{gpt4omini}, it repeatedly called a web search tool with incorrect arguments, received an error, but then failed to correct its mistake, retrying the exact same failing command. AgentSight's real-time monitors detect this anomalous resource consumption from a trace of API calls and passed it to the observer LLM. The LLM identified the root cause as a persistent tool error, noting the agent was caught in a "try-fail-re-reason" loop; it executed the same failing command, passed the identical error back to the reasoning LLM, and failed to learn from the tool's output. 
+% The system triggered an alert after three complete cycles, a configurable threshold, where the agent had already consumed 4,800 tokens. This intervention prevented further resource waste and service degradation, saving an estimated \$2.40 in API cost, and highlighted the importance of semantic-aware monitoring.
 
 \subsubsection{Case Study 3: Multi-Agent Coordination Monitoring}
 
-AgentSight monitored a team of three collaborating software development agents, capturing 12,847 total events. For instance, Agent B was blocked for 34\% of its total wall-clock time waiting on Agent A's multiple design revisions, which triggered cascading rework. File locking contention between Agent B's implementation and Agent C's testing caused 23 retry cycles. The analysis demonstrated that while the agents developed some emergent coordination, explicit mechanisms could reduce total runtime by up to 25\% on this workload and message-based communication could eliminate most of the polling overhead. This reveals how boundary tracing uniquely captures multi-agent system dynamics that application-level monitoring cannot observe across process boundaries.
+AgentSight monitored a team of 6 collaborating software development agents for our Github repo, using claude-code subagents\cite{subagents}, captured 3153 total events after Correlation Engine. For instance, frontend agent and test agent sometimes are blocked by sequential dependencies and numerous retry cycles caused by file locking contention during parallel development and testing tasks. The analysis demonstrated that while the agents developed some emergent coordination, separating the roles more clear could reduce total runtime and token cost. This reveals how boundary tracing uniquely captures multi-agent system dynamics that application-level monitoring cannot observe across process boundaries.
 
 % \subsubsection{Case Study 1: Detecting Prompt Injection Attacks}
 
@@ -60,7 +62,6 @@ This paper introduced AgentSight to bridge the critical semantic gap between an 
 
 % \textbf{Repository}: \url{https://github.com/eunomia-bpf/agentsight}
 
-\bibliographystyle{ACM-Reference-Format}
-\bibliography{ai}
 
-\end{document}
+
+
