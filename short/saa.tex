@@ -163,113 +163,85 @@ Analysis of the surveyed tools reveals both promising standardization trends and
 
 \textbf{Finding 4: Complete Absence of System-Level Visibility.} No tool captures telemetry at kernel or network boundaries. None observe \texttt{execve()} syscalls, encrypted TLS payloads, or GPU driver interactions directly. When our code review agent spawns subprocess tools, SDK instrumentation sees only high-level API calls ("run linter"), not actual command arguments, environment variables, or subprocess network connections—details that remain immutable regardless of agent code changes.
 
-\subsection{The Inescapable Conclusion: The Need for System-Level Observability}
+\subsection{Implications: The Case for System-Boundary Observability}
 
-Because current solutions live \emph{inside} the agent process, they inherit its fragility. Each workflow change requires redeploying instrumentation, causing breakage on prompt evolution. Prompt injection can silence or falsify logs, enabling evasion by compromised agents. Most critically, these approaches remain blind to cross-process interactions, unable to observe shell script execution, subprocess coordination, or external tool invocation.
-
-System-level tracing at kernel and network boundaries addresses these gaps. Table 3 illustrates where SDK-based instrumentation fails and how boundary tracing provides complementary visibility:
+The surveyed tools address the question "what happened inside my code?" but cannot answer "what actually reached the OS and network?"—a complementary perspective that is both tamper-resistant and framework-agnostic. Table 3 illustrates where SDK instrumentation fails and how system-boundary tracing provides complementary visibility:
 
 \begin{table}[h]
 \centering
 \small
 \begin{tabular}{p{0.45\columnwidth} p{0.45\columnwidth}}
 \toprule
-\textbf{Where today's SDKs stop} & \textbf{What boundary tracing sees} \\
+\textbf{Where SDK instrumentation stops} & \textbf{What boundary tracing captures} \\
 \midrule
 Missing span when agent spawns \texttt{curl} directly & \texttt{execve("curl", ...)} + network write \\
-Agent mutates its own prompt string before logging & Raw ciphertext leaving the TLS socket \\
-Sub-process mis-uses GPU & \texttt{ioctl} + CUDA driver calls \\
+Agent mutates prompt before logging & Raw TLS payload leaving socket \\
+Subprocess GPU misuse & \texttt{ioctl} + CUDA driver calls \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Existing tools solve the "what happened inside my code?" question; system-level tracing answers "what actually hit the wire and the OS?"—a complementary, harder-to-tamper vantage point. This gap represents a critical research opportunity and motivates the architectural vision we present in Section 3.
+This analysis motivates a fundamental architectural shift: observability must move from fragile in-process instrumentation to stable system boundaries. The next section presents our vision for achieving this through a two-plane architecture that addresses both the instrumentation gap (via system-boundary capture) and the semantic gap (via autonomous observability agents).
 
-\section{A Vision for a New Architecture: The Two-Plane Model}
+\section{A Two-Plane Architecture for Agent Observability}
 
-Given the deployment challenges (security, cost, fragmentation) and the inadequacy of current solutions, we propose a fundamental architectural shift. Scalable agent observability requires two integrated layers:
+Having established that current solutions cannot bridge the instrumentation and semantic gaps, we now present an architectural vision that addresses both challenges through complementary layers: a Data Plane that captures tamper-resistant telemetry at system boundaries, and a Cognitive Plane where autonomous agents provide semantic understanding at scale.
 
 \subsection{The Data Plane: Zero-Instrumentation Foundation}
 
 \textbf{Core Principle:} Observability must be \emph{decoupled from agent internals}. Rather than instrumenting rapidly-evolving application code, capture telemetry at \emph{stable system boundaries}—kernel syscalls, network interfaces, and TLS endpoints.
 
-\textbf{The Agent Stack Architecture.} Understanding where to observe requires understanding the agent architecture as three nested layers:
+\textbf{The Agent Stack.} Agent systems comprise three nested layers: (1) \emph{LLM serving provider}—token generation and chain-of-thought reasoning (OpenAI API, local llama.cpp); (2) \emph{Agent runtime}—orchestration logic coordinating LLM calls, tool invocations, and state management (LangChain, AutoGen, Claude Code); (3) \emph{External environment}—OS, containers, APIs, databases, other agents.
 
+Returning to our code review agent: when it queries the vector database for similar bugs, the agent runtime (LangChain) makes an HTTPS call to Pinecone's API. When it spawns \texttt{pylint}, the runtime executes \texttt{fork()} + \texttt{execve()} syscalls. When it coordinates with the security agent, it sends JSON over a network socket. These interactions cross system boundaries where observability can capture immutable telemetry.
 
-\begin{comment}
-    
+\textbf{The Three Observability Boundaries.} The Data Plane captures telemetry at three stable interfaces: (1) \emph{Network boundary}—TLS-encrypted JSON requests/responses between agent runtime and LLM provider, revealing prompt content, token usage, and model parameters; (2) \emph{System boundary}—syscalls (\texttt{execve()}, \texttt{open()}, \texttt{connect()}) showing tool execution, file access, and subprocess spawning; (3) \emph{Inter-agent boundary}—API calls, message passing, or shared memory coordination between multiple agents.
 
-\begin{center}
-    
-\begin{Verbatim}[fontsize=\small, commandchars=\\\{\}]
-┌───────────────────────────────────────────────┐
-│          ☁  Rest of workspace / system       │
-│  (APIs, DBs, message bus, OS, Kubernetes…)    │
-│                                               │
-│   ┌───────────────────────────────────────┐   │
-│   │       Agent runtime / framework       │   │
-│   │ (LangChain, claude-code, gemini-cli …)│   │
-│   │  • orchestrates prompts & tool calls  │   │
-│   │  • owns scratch memory / vector DB    │   │
-│   └───────────────────────────────────────┘   │
-│               ↑ outbound API calls            │
-│───────────────────────────────────────────────│
-│               ↓ inbound events                │
-│   ┌───────────────────────────────────────┐   │
-│   │          LLM serving provider         │   │
-│   │    (OpenAI endpoint, local llama.cpp) │   │
-│   └───────────────────────────────────────┘   │
-└───────────────────────────────────────────────┘
-\end{Verbatim}
-\end{center}
-\end{comment}
+\textbf{Why This Approach Works.} System-boundary observability provides four critical properties. \emph{Framework neutrality}: works across LangChain, AutoGen, custom frameworks without code changes—our code review agent remains observable even if rewritten from LangChain to raw Python. \emph{Tamper resistance}: compromised agents cannot falsify kernel syscall traces or TLS socket writes—the malicious bash script attack becomes visible as \texttt{write("exploit.sh")} + \texttt{execve("exploit.sh")}. \emph{Semantic richness}: TLS interception captures full prompt text, tool arguments, and reasoning chains without instrumenting agent code. \emph{Unified causality}: correlates agent semantics (prompts) with system events (subprocess execution) in one timeline, eliminating multi-vendor telemetry silos.
 
-
-\begin{itemize}
-  \item \textbf{LLM serving provider} – token generation, non-deterministic reasoning, chain-of-thought text that may or may not be surfaced. Most performance optimization work focuses on this layer.
-  \item \textbf{Agent runtime layer} – orchestrates tasks into sequences of LLM calls plus external tool invocations; manages transient ``memories'' and state.
-  \item \textbf{Outside world} – OS, containers, APIs, databases, other services and agents.
-\end{itemize}
-
-\textbf{The Observability Boundaries.} For observability purposes, the critical interfaces exist at three levels: the network boundary, where TLS-encrypted JSON inference requests and responses flow between agent and LLM provider; the system boundary, where syscalls and subprocess creation occur as agents execute tools (\texttt{curl}, \texttt{grep}, file I/O); and the inter-agent boundary, where message passing, shared memory, or API calls coordinate multiple agents.
-
-Traditional software observability is \textbf{instrumentation-first}—manually inserting logs, spans, and metrics into application code. But AI agents \emph{dynamically modify their own logic} through prompt evolution, spontaneous tool creation, and self-modification. This constant internal mutability makes instrumentation fundamentally fragile.
-
-\textbf{Benefits of System-Boundary Observability.} This approach offers framework neutrality, working across all agent runtimes (LangChain, AutoGen, gemini-cli, custom frameworks) without modification. It provides semantic stability by capturing prompt-level semantics without chasing rapidly-changing framework APIs, while maintaining trust and auditability through an independent audit trail that cannot be compromised by in-agent malware or prompt injection. Perhaps most critically, it enables construction of a universal causal graph that merges agent-level semantics (prompts, reasoning) with OS-level events (syscalls, network) into one coherent timeline, providing a single observability layer across the fragmented multi-vendor stack (LLM SaaS, agent code, system runtime, tools).
-
-\textbf{Technical Implementation.} Technologies like eBPF~\cite{brendangregg,ebpfio} enable this vision by providing kernel-level tracing with <3\% overhead~\cite{zheng2025extending}. Key capabilities include TLS interception through hooking userspace TLS read/write functions to capture encrypted LLM traffic without proxies, syscall tracing to monitor \texttt{execve()}, file I/O, and network calls for tracking tool execution, and process genealogy tracking to understand agent-spawned workflow chains.
+\textbf{Technical Feasibility.} Technologies like eBPF~\cite{brendangregg,ebpfio} enable kernel-level tracing with <3\% overhead~\cite{zheng2025extending}. Userspace TLS function hooking (OpenSSL \texttt{SSL\_read/write}, Go \texttt{crypto/tls}) captures encrypted LLM traffic without proxies. Process genealogy tracking reconstructs agent-spawned subprocess trees. The Data Plane thus provides comprehensive, tamper-resistant telemetry decoupled from agent internals.
 
 \subsection{The Cognitive Plane: Agents Observing Agents}
 
-\textbf{The Human Scalability Crisis.} Even with perfect telemetry from the Data Plane, human operators cannot effectively monitor thousands of production agents generating millions of events per hour. The sheer volume, combined with the semantic complexity (understanding reasoning chains, detecting subtle persona drift, correlating multi-agent failures), exceeds human cognitive capacity.
+While the Data Plane solves the instrumentation gap, it cannot bridge the semantic gap alone. Raw syscall traces and TLS payloads do not explain \emph{why} our code review agent spawned \texttt{pylint} at this moment, whether this action aligns with its goal, or if the reasoning chain exhibits early signs of drift. Semantic understanding requires intelligence—and at production scale (thousands of agents, millions of events per hour), only autonomous systems can provide it.
 
-\textbf{Core Thesis:} The only way to observe complex, autonomous AI systems at scale is with \emph{other autonomous AI systems}. We propose a Cognitive Plane—an autonomous multi-agent system dedicated to observability itself.
+\textbf{Core Principle:} The only scalable way to observe autonomous AI systems is with \emph{other autonomous AI systems}. We propose a Cognitive Plane—a coordinated multi-agent system dedicated to observability itself.
 
-\textbf{Architecture.} The Cognitive Plane consists of specialized observability agents~\cite{Rombaut2025Watson,Kim2025AgenticInterp} organized in a coordinated hierarchy. Observer agents continuously monitor telemetry streams from the Data Plane, applying learned patterns to detect anomalies such as reasoning loops, cost spikes, and security violations~\cite{Dong2024AgentOps}. Diagnoser agents perform automated root-cause analysis by correlating semantic traces (prompt evolution) with system events (syscalls, network failures), using LLM reasoning to generate human-readable incident reports explaining \emph{why} a failure occurred~\cite{Moshkovich2025Pipeline}. Remediator agents take autonomous corrective actions within defined safety boundaries—circuit-breaking runaway agents, adjusting prompt temperature, scaling resources—while escalating high-risk decisions to human operators via structured recommendations. Finally, cost optimizer agents analyze token usage, API call patterns, and reasoning efficiency across all agents to identify optimization opportunities and automatically implement approved changes.
+\textbf{Architecture: Specialized Observability Agents.} The Cognitive Plane comprises four agent types~\cite{Rombaut2025Watson,Kim2025AgenticInterp}, each addressing distinct observability challenges:
 
-\textbf{Key Properties.} This architecture exhibits three critical properties that distinguish it from traditional monitoring. First, LLM-powered agents provide semantic understanding, interpreting natural language prompts, reasoning chains, and tool interactions to bridge the semantic gap that rule-based systems cannot cross. Second, observability agents engage in continuous learning from historical incidents, improving detection accuracy and expanding their understanding of normal versus anomalous behavior over time. Third, the Cognitive Plane enables proactive management rather than reactive debugging, predicting failures (e.g., detecting early signs of reasoning loops) and intervening before user impact occurs.
+\emph{Observer agents} continuously monitor Data Plane telemetry streams, applying learned patterns to detect anomalies: reasoning loops (the code review agent requests context five times in succession), cost spikes (unexpected token usage surge), security violations (subprocess writes to \texttt{/etc/passwd})~\cite{Dong2024AgentOps}. When our code review agent's token usage suddenly doubles, the observer flags the anomaly for diagnosis.
 
-\section{Future Directions and Open Challenges}
+\emph{Diagnoser agents} perform root-cause analysis by correlating semantic traces (prompt evolution, tool call sequences) with system events (syscall patterns, network failures). Using LLM reasoning, they generate human-readable incident reports: "Agent entered reasoning loop because vector database query returned no results, triggering repeated context requests"~\cite{Moshkovich2025Pipeline}. This bridges raw telemetry to causal explanation.
 
-\textbf{1. Causal Observability.} Current systems correlate events; future work must establish \emph{causal relationships}. Why did an agent make a specific decision? What would have happened with a different prompt? This requires causal inference techniques applied to agent telemetry.
+\emph{Remediator agents} take autonomous corrective actions within safety boundaries: circuit-breaking runaway agents, adjusting prompt temperature, scaling vector database resources. High-risk actions (modifying production agent prompts) escalate to human operators with structured recommendations. When the observer detects a cost spike, the remediator automatically reduces \texttt{temperature} to 0.3 and notifies the operator.
 
-\textbf{2. Evaluation Benchmarks.} The field lacks standardized benchmarks for agent observability systems. We need datasets of real agent failures, metrics for semantic coverage, and evaluation frameworks for observability agent effectiveness.
+\emph{Cost optimizer agents} analyze token usage patterns, API call efficiency, and tool coordination across all agents, identifying optimization opportunities: "Replace sequential linter calls with parallel subprocess pool" or "Cache vector database results for 5 minutes." Approved optimizations are automatically deployed.
 
-\textbf{3. Security of the Observability Layer.} If the Cognitive Plane is compromised, attackers gain visibility into all production agents. Research is needed on tamper-proof telemetry channels, secure multi-party computation for sensitive traces, and Byzantine-fault-tolerant observability architectures.
+\textbf{Key Properties.} This architecture provides three capabilities traditional monitoring cannot achieve. \emph{Semantic understanding}: LLM-powered agents interpret natural language prompts, reasoning quality, and multi-step coordination—bridging the semantic gap. \emph{Continuous learning}: observability agents improve from historical incidents, expanding their models of normal versus anomalous behavior. \emph{Proactive management}: rather than reactive debugging, the Cognitive Plane predicts failures (detecting early reasoning loop patterns) and intervenes before user impact.
 
-\textbf{4. The Semantic Gap.} While system-level tracing captures raw events, extracting agent \emph{intent} requires sophisticated NLP and program synthesis. How do we infer "the agent is trying to accomplish X" from syscall sequences and TLS payloads?
+\section{Open Research Challenges}
 
-\textbf{5. Standardization.} OpenTelemetry semantic conventions for agents are nascent. The community needs consensus on span attributes (\texttt{agent.reasoning.loop\_id}, \texttt{tool.coordination.pattern}), trace topology (how to represent multi-agent interactions), and evaluation schemas.
+Realizing this vision requires sustained research effort across five critical dimensions:
+
+\textbf{Causal Inference for Agent Behavior.} Current systems correlate events but cannot answer counterfactuals: Why did our code review agent choose \texttt{pylint} over \texttt{flake8}? What would have happened with temperature 0.7 instead of 0.3? Causal observability requires techniques from causal inference applied to agent telemetry—identifying decision points, instrumenting counterfactual branches, and constructing causal graphs from observational data.
+
+\textbf{Benchmarks and Evaluation.} The field lacks standardized evaluation frameworks. We need: (1) datasets of real agent failures with ground-truth root causes, (2) metrics for semantic coverage (what fraction of reasoning intent is captured?), (3) adversarial test suites for tamper resistance, and (4) evaluation protocols for Cognitive Plane effectiveness (detection latency, false positive rates, remediation success).
+
+\textbf{Securing the Observability Infrastructure.} If the Cognitive Plane is compromised, attackers gain visibility into all production agents—telemetry data, prompts, coordination patterns. Critical research questions include: How do we build tamper-proof telemetry channels from Data Plane to Cognitive Plane? Can secure multi-party computation protect sensitive traces while enabling collaborative diagnosis? How do we design Byzantine-fault-tolerant observability agents that function correctly even when some agents are malicious?
+
+\textbf{Semantic Reconstruction from System Events.} While eBPF captures syscalls and TLS payloads, inferring high-level agent \emph{intent} requires bridging a semantic abstraction gap. When we observe \texttt{execve("pylint")} followed by network writes to GitHub API, how do we reconstruct the reasoning: "Agent determined code violated style guide, ran linter to generate specific examples, posted structured feedback"? This demands program synthesis, NLP, and machine learning techniques to map low-level events to high-level goals.
+
+\textbf{Standardization of Semantic Conventions.} OpenTelemetry for agents remains nascent. Community consensus is needed on: span attributes for agent semantics (\texttt{agent.goal}, \texttt{reasoning.step\_id}, \texttt{tool.justification}), trace topology for multi-agent interactions (how to represent coordination, delegation, conflict), evaluation result schemas (hallucination scores, relevance metrics), and unified cost attribution across LLM, tool, and infrastructure layers.
 
 \section{Conclusion}
 
-The current fragmented, model-centric approach to AI agent observability represents a fundamental barrier to large-scale deployment. Application-level instrumentation creates brittle SDK silos that cannot address the security, cost, and complexity challenges inherent to agent systems. Traditional APM tools, LLM-centric monitoring, and serving observability each address only narrow slices of the problem, leaving critical blind spots.
+Production deployment of AI agent systems faces a fundamental observability challenge: traditional approaches assume deterministic code with stable interfaces, but agents generate non-deterministic outputs through rapidly-evolving internal logic. Our analysis of current solutions reveals universal dependence on application-layer instrumentation that creates three critical problems—maintenance burden from framework churn, evasion by dynamically-spawned tools, and tampering vulnerabilities when agents are compromised. These limitations stem from two complementary gaps: the instrumentation gap (agent code is unstable and tamperable) and the semantic gap (system events lack intent).
 
-We argue that the future of reliable, large-scale agentic AI depends on adopting a unified, two-plane observability architecture: (1) a \textbf{Data Plane} that provides zero-instrumentation telemetry capture at stable system boundaries, decoupling observability from rapidly-evolving agent internals while providing tamper-resistant audit trails, and (2) a \textbf{Cognitive Plane} where autonomous observability agents provide the semantic understanding and proactive management that human operators cannot achieve at scale.
+We propose a two-plane architecture that addresses both challenges. The \textbf{Data Plane} captures tamper-resistant telemetry at stable system boundaries—kernel syscalls, network interfaces, TLS endpoints—providing framework-neutral observability decoupled from agent internals. Technologies like eBPF enable comprehensive tracing of subprocess execution, encrypted LLM traffic, and inter-agent coordination with minimal overhead. The \textbf{Cognitive Plane} deploys autonomous observability agents that provide semantic understanding at scale: observers detect anomalies in reasoning patterns, diagnosers correlate telemetry to explain root causes, remediators take corrective actions within safety boundaries, and optimizers identify efficiency improvements. Together, these planes bridge raw system events to causal intent, enabling unified observability across the fragmented multi-vendor agent stack.
 
-This architectural vision directly addresses the deployment challenges we identified: system-boundary observability eliminates SDK fragmentation and security vulnerabilities; unified telemetry enables cross-layer cost optimization; and autonomous observability agents bridge the semantic gap between raw events and agent intent. Most importantly, this approach scales: as agent deployments grow from hundreds to millions, the observability system grows with them—not through human labor, but through autonomous agent-to-agent coordination.
+This approach directly addresses the deployment challenges motivating our work. System-boundary observability eliminates SDK fragmentation and provides tamper-resistant audit trails immune to prompt injection. Unified telemetry enables cross-layer cost optimization and security enforcement. Autonomous observability agents scale with agent deployments—from hundreds to millions—through self-coordination rather than human labor. Most importantly, this architecture acknowledges a fundamental reality: \textbf{only autonomous systems can effectively observe autonomous systems at production scale}.
 
-The path forward requires sustained research effort across the community: developing causal inference techniques for agent behavior, establishing evaluation benchmarks, securing the observability infrastructure itself, and standardizing semantic conventions. But the fundamental insight is clear: \textbf{only agents can truly observe agents at scale}. The question is not whether this transition will occur, but how quickly we can build the foundations to make it possible.
+Realizing this vision requires sustained community effort: developing causal inference techniques, establishing evaluation benchmarks, securing the observability infrastructure itself, standardizing semantic conventions. But the path forward is clear. As agent systems transform software infrastructure, observability must evolve from fragile in-process instrumentation to autonomous, boundary-based monitoring. The future of reliable agentic AI depends on building these foundations now.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{../ai}
