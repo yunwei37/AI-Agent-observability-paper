@@ -39,8 +39,14 @@ force: clean all
 # Short paper compilation
 short: $(SHORT).pdf
 
-$(SHORT).pdf: $(SHORT).tex
+$(SHORT).pdf: $(SHORT).tex $(SHORT).bbl
 	cd short && $(LATEX) $(LATEXFLAGS) saa.tex
+	cd short && $(LATEX) $(LATEXFLAGS) saa.tex
+
+$(SHORT).bbl: $(SHORT).aux ai.bib
+	cd short && $(BIBTEX) saa
+
+$(SHORT).aux: $(SHORT).tex
 	cd short && $(LATEX) $(LATEXFLAGS) saa.tex
 
 .PHONY: all clean cleanall force short

@@ -45,9 +45,9 @@ AI agent systems are transforming software infrastructure, yet their large-scale
 
 \subsection{The Current State of AI Agent Deployment}
 
-The rise of AI-powered agentic systems is transforming modern software infrastructure. Frameworks like AutoGen, LangChain, Claude Code, and gemini-cli orchestrate large language models (LLMs) to automate software engineering tasks, data analysis pipelines, and multi-agent decision-making. However, their large-scale production deployment faces three fundamental challenges that existing observability paradigms cannot address:
+The rise of AI-powered agentic systems is transforming modern software infrastructure~\cite{wang2024survey,guo2024survey}. Frameworks like AutoGen~\cite{autogen}, LangChain~\cite{langchain}, Claude Code~\cite{claudecode}, and gemini-cli~\cite{geminicli} orchestrate large language models (LLMs) to automate software engineering tasks, data analysis pipelines, and multi-agent decision-making~\cite{tran2025survey}. However, their large-scale production deployment faces three fundamental challenges that existing observability paradigms cannot address:
 
-\textbf{1. Non-determinism and Complexity Lead to Security Risks.} Unlike traditional software components that produce deterministic, easily observable behaviors, AI-agent systems generate open-ended, non-deterministic outputs, often conditioned on hidden internal states and emergent interactions between multiple agents. This creates novel failure modes: wrong facts, infinite reasoning loops, forgotten instructions, and emergent mis-coordination between agents. More critically, agents can be compromised via prompt injection attacks, potentially evading their own logging mechanisms to hide malicious behavior. Traditional crash dumps and error logs are insufficient—we need semantic traces of \emph{why} an agent made a decision, not just \emph{what} it executed.
+\textbf{1. Non-determinism and Complexity Lead to Security Risks.} Unlike traditional software components that produce deterministic, easily observable behaviors, AI-agent systems generate open-ended, non-deterministic outputs, often conditioned on hidden internal states and emergent interactions between multiple agents. This creates novel failure modes: wrong facts, infinite reasoning loops~\cite{zhang2024breakingagents}, forgotten instructions, and emergent mis-coordination between agents. More critically, agents can be compromised via prompt injection attacks~\cite{indirect-prompt-inject}, potentially evading their own logging mechanisms to hide malicious behavior. Traditional crash dumps and error logs are insufficient—we need semantic traces of \emph{why} an agent made a decision, not just \emph{what} it executed.
 
 \textbf{2. Multi-Layer Execution Stacks Incur Prohibitive Costs.} Agent systems span multiple expensive layers: LLM inference (token generation), reasoning frameworks (chain-of-thought processing), tool execution (API calls, subprocess spawning), and persistent memory (vector databases). Each layer contributes to operational costs, yet current observability solutions provide no unified view to optimize spending. Cost overruns from runaway reasoning loops, redundant API calls, or inefficient tool usage remain invisible until billing alerts trigger—far too late for real-time intervention.
 
@@ -150,7 +150,7 @@ Analysis of the current landscape reveals five critical insights:
 
 \textbf{1. SDK Hell: Universal Application-Layer Dependence.} 11 of 12 surveyed tools require application-level hooks—wrapping function calls, proxying requests, or injecting middleware. This creates a brittle ecosystem: each framework update (LangChain, AutoGen, etc.) can break instrumentation, and agents that dynamically spawn tools or modify their own code bypass these wrappers entirely. The result is a perpetual maintenance burden and unreliable telemetry.
 
-\textbf{2. OpenTelemetry Emergence but Incomplete Adoption.} Traceloop, Honeycomb, Langfuse, PromptLayer, and Phoenix (via OpenInference) have converged on OpenTelemetry (OTel) as the wire format, providing hope for standardization. However, semantic conventions remain immature—attributes like \texttt{model.temp}, \texttt{reasoning.loop\_id}, or \texttt{tool.coordination\_pattern} are not yet standardized, forcing each vendor to define proprietary extensions.
+\textbf{2. OpenTelemetry Emergence but Incomplete Adoption.} Traceloop, Honeycomb, Langfuse, PromptLayer, and Phoenix (via OpenInference) have converged on OpenTelemetry (OTel) as the wire format~\cite{Liu2025OTel}, providing hope for standardization. However, semantic conventions remain immature—attributes like \texttt{model.temp}, \texttt{reasoning.loop\_id}, or \texttt{tool.coordination\_pattern} are not yet standardized, forcing each vendor to define proprietary extensions.
 
 \textbf{3. Semantic Analysis Remains Nascent.} Only a subset (Phoenix, LangSmith, Langfuse, Literal AI) offer LLM-powered semantic evaluation (toxicity, hallucination detection, relevance scoring). Most solutions focus on operational metrics (latency, cost, throughput), leaving the critical "semantic gap"—understanding \emph{why} an agent made a decision—largely unaddressed.
 
@@ -252,7 +252,7 @@ Traditional software observability is \textbf{instrumentation-first}—manually 
   \item \textbf{Multi-vendor unification}: Provides single observability layer across fragmented stack (LLM SaaS, agent code, system runtime, tools).
 \end{itemize}
 
-\textbf{Technical Implementation.} Technologies like eBPF enable this vision by providing kernel-level tracing with <3\% overhead. Key capabilities include:
+\textbf{Technical Implementation.} Technologies like eBPF~\cite{brendangregg,ebpfio} enable this vision by providing kernel-level tracing with <3\% overhead~\cite{zheng2025extending}. Key capabilities include:
 \begin{itemize}
   \item \textbf{TLS interception}: Hooking userspace TLS read/write functions to capture encrypted LLM traffic without proxies
   \item \textbf{Syscall tracing}: Monitoring \texttt{execve()}, file I/O, network calls to track tool execution
@@ -265,12 +265,12 @@ Traditional software observability is \textbf{instrumentation-first}—manually 
 
 \textbf{Core Thesis:} The only way to observe complex, autonomous AI systems at scale is with \emph{other autonomous AI systems}. We propose a Cognitive Plane—an autonomous multi-agent system dedicated to observability itself.
 
-\textbf{Architecture:} The Cognitive Plane consists of specialized observability agents:
+\textbf{Architecture:} The Cognitive Plane consists of specialized observability agents~\cite{Rombaut2025Watson,Kim2025AgenticInterp}:
 
 \begin{enumerate}
-  \item \textbf{Observer Agents}: Continuously monitor telemetry streams from the Data Plane, applying learned patterns to detect anomalies (reasoning loops, cost spikes, security violations).
+  \item \textbf{Observer Agents}: Continuously monitor telemetry streams from the Data Plane, applying learned patterns to detect anomalies (reasoning loops, cost spikes, security violations)~\cite{Dong2024AgentOps}.
 
-  \item \textbf{Diagnoser Agents}: Perform automated root-cause analysis by correlating semantic traces (prompt evolution) with system events (syscalls, network failures). Use LLM reasoning to generate human-readable incident reports explaining \emph{why} a failure occurred.
+  \item \textbf{Diagnoser Agents}: Perform automated root-cause analysis by correlating semantic traces (prompt evolution) with system events (syscalls, network failures). Use LLM reasoning to generate human-readable incident reports explaining \emph{why} a failure occurred~\cite{Moshkovich2025Pipeline}.
 
   \item \textbf{Remediator Agents}: Take autonomous corrective actions within defined safety boundaries (e.g., circuit-breaking runaway agents, adjusting prompt temperature, scaling resources). Escalate high-risk decisions to human operators via structured recommendations.
 
@@ -307,6 +307,9 @@ We argue that the future of reliable, large-scale agentic AI depends on adopting
 This architectural vision directly addresses the deployment challenges we identified: system-boundary observability eliminates SDK fragmentation and security vulnerabilities; unified telemetry enables cross-layer cost optimization; and autonomous observability agents bridge the semantic gap between raw events and agent intent. Most importantly, this approach scales: as agent deployments grow from hundreds to millions, the observability system grows with them—not through human labor, but through autonomous agent-to-agent coordination.
 
 The path forward requires sustained research effort across the community: developing causal inference techniques for agent behavior, establishing evaluation benchmarks, securing the observability infrastructure itself, and standardizing semantic conventions. But the fundamental insight is clear: \textbf{only agents can truly observe agents at scale}. The question is not whether this transition will occur, but how quickly we can build the foundations to make it possible.
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{../ai}
 
 \end{document}
 
