@@ -65,10 +65,11 @@ Yet despite rapid adoption in development environments, production deployment at
 
 \textbf{3. Fragmented Multi-Vendor Instrumentation.} Our code review agent's execution spans multiple administrative domains: LLM serving (OpenAI API), agent orchestration (LangChain), vector storage (Pinecone), tool execution (subprocess calls), and inter-agent communication (custom APIs). Each layer has its own SDK, logging format, and instrumentation requirements, creating incompatible telemetry silos. When the security agent coordination fails, debugging requires correlating logs across five different systems with no unified trace.
 
-\begin{table}[t]
+\begin{table*}[t]
   \caption{Traditional vs. Agent Observability: A Comparative Framework}
   \label{tab:diff}
-  \begin{tabular}{@{}p{3.2cm}p{4.2cm}p{4.2cm}@{}}
+  \centering
+  \begin{tabular}{@{}p{3cm}p{5.5cm}p{5.5cm}@{}}
     \toprule
     \textbf{Aspect} &
     \textbf{Traditional Observability} &
@@ -94,7 +95,7 @@ Yet despite rapid adoption in development environments, production deployment at
     Agent decision path/trajectory graph \\
     \bottomrule
   \end{tabular}
-\end{table}
+\end{table*}
 
 \subsection{Why Existing Observability Paradigms Cannot Scale}
 
@@ -253,7 +254,7 @@ Realizing this vision requires sustained research effort across five critical di
 Production agent systems require a fundamental shift from application-layer instrumentation to system-boundary observability. We propose a two-plane architecture: a Data Plane providing tamper-resistant, framework-neutral telemetry capture at kernel, network, and TLS interfaces; and a Cognitive Plane deploying autonomous observability agents that provide semantic understanding, continuous learning, and multi-layer causal reasoning. These planes are interdependent—system-boundary capture enables trustworthy analysis; autonomous intelligence makes raw events actionable—addressing the core challenge: \textbf{only autonomous intelligence can effectively observe, understand, and manage autonomous intelligence at production scale}. As agent systems transform software infrastructure, observability infrastructure must itself become agentic.
 
 \bibliographystyle{ACM-Reference-Format}
-\bibliography{../ai}
+\bibliography{ai}
 
 \end{document}
 

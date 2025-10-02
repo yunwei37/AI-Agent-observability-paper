@@ -3,9 +3,11 @@
 # Main document name (without .tex extension)
 MAIN = main
 SHORT = short/saa
+SAA = saa
 
 # LaTeX compiler
 LATEX = xelatex
+PDFLATEX = pdflatex
 BIBTEX = bibtex
 LATEXFLAGS = -interaction=nonstopmode
 
@@ -49,4 +51,17 @@ $(SHORT).bbl: $(SHORT).aux ai.bib
 $(SHORT).aux: $(SHORT).tex
 	cd short && $(LATEX) $(LATEXFLAGS) saa.tex
 
-.PHONY: all clean cleanall force short
+# SAA paper compilation (root level, uses pdflatex)
+saa: $(SAA).pdf
+
+$(SAA).pdf: $(SAA).tex $(SAA).bbl
+	$(PDFLATEX) $(LATEXFLAGS) $(SAA).tex
+	$(PDFLATEX) $(LATEXFLAGS) $(SAA).tex
+
+$(SAA).bbl: $(SAA).aux ai.bib
+	$(BIBTEX) $(SAA)
+
+$(SAA).aux: $(SAA).tex
+	$(PDFLATEX) $(LATEXFLAGS) $(SAA).tex
+
+.PHONY: all clean cleanall force short saa
