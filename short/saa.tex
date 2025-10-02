@@ -42,7 +42,7 @@
 \sloppy
 \begin{abstract}
 AI agent systems are transforming software infrastructure through autonomous task orchestration, but their production deployment reveals a fundamental mismatch: traditional observability assumes deterministic code with stable interfaces, while agents generate non-deterministic outputs through rapidly-evolving internal logic. Current solutions—traditional APM, model-centric LLM monitoring, and framework-specific instrumentation—create fragmented SDK silos that cannot capture semantic reasoning, resist tampering, or scale across multi-vendor ecosystems. We propose a two-plane architecture: (1) a Data Plane providing zero-instrumentation telemetry capture at stable system boundaries (kernel, network, TLS), decoupling observability from agent internals, and (2) a Cognitive Plane where autonomous observability agents provide semantic understanding and proactive management that human operators cannot achieve at scale. This approach addresses the unique demands of agent systems while enabling secure, cost-effective, and semantically-aware observability.
-\end{abstract>
+\end{abstract}
 
 
 \maketitle
