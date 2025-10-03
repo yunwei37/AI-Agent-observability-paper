@@ -540,3 +540,19 @@ title = {GPT-4o Mini: Advancing Cost-Efficient Intelligence},
   howpublished = {\url{https://www.honeycomb.io/blog/observability-a-manifesto}},
   note = {Honeycomb blog post defining modern observability principles}
 }
+
+@inproceedings{yang2025egpu,
+  author = {Yang, Yiwei and Yu, Tong and Zheng, Yusheng and Quinn, Andrew},
+  title = {eGPU: Extending eBPF Programmability and Observability to GPUs},
+  year = {2025},
+  isbn = {9798400714702},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  url = {https://doi.org/10.1145/3723851.3726984},
+  doi = {10.1145/3723851.3726984},
+  abstract = {Precise GPU observability and programmability are essential for optimizing performance in AI workloads and other computationally intensive high-performance computing (HPC) applications. In this paper, we introduce eGPU, the first framework and eBPF runtime that dynamically offloads eBPF bytecode onto GPUs via dynamic PTX injection. Designed primarily for observability, our system leverages real-time GPU telemetry, eBPF-based dynamic instrumentation, and automated performance analysis to pinpoint bottlenecks at multiple layers—including kernel execution, memory transfers, and heterogeneous compute orchestration—without incurring significant overhead or interrupting active GPU kernels. By dynamically compiling eBPF programs into PTX snippets and injecting them directly into running GPU kernels, eGPU provides fine-grained, low-overhead instrumentation that seamlessly integrates with existing eBPF ecosystems. Our initial micro-benchmark evaluation demonstrates that eGPU achieves low instrumentation overhead while providing high-resolution performance insights. Ultimately, eGPU opens a pathway toward future programmable GPU infrastructures capable of dynamically adapting to diverse and evolving workload requirements.},
+  booktitle = {Proceedings of the 4th Workshop on Heterogeneous Composable and Disaggregated Systems},
+  pages = {73–79},
+  numpages = {7},
+  series = {HCDS '25}
+}
