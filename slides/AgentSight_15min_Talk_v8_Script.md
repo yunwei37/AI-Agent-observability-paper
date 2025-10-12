@@ -4,123 +4,173 @@ Authors: Yusheng Zheng (UC Santa Cruz), Yanpeng Hu (ShanghaiTech University), To
 
 ## AgentSight: System‑Level Observability for AI Agents Using eBPF
 
-Opening. Good morning/afternoon. This talk presents AgentSight, a system‑level observability framework for AI agents. Our focus is the semantic gap that separates what an agent intends to do (its prompts and tool calls) from what the operating system actually executes (processes, syscalls, file and network I/O). Traditional tooling delivers one side or the other, but rarely connects why to what.
+**Opening.** Good morning. Today I'm presenting AgentSight—a system-level observability framework for AI agents.
 
-What we propose. AgentSight observes at the system boundaries every agent must cross: the network boundary (where prompts and responses traverse TLS) and the kernel boundary (where processes, files, and sockets are touched). By correlating those two streams, we can attribute concrete effects back to a specific intent, then ask an observer LLM to explain risks and inefficiencies in natural language.
+The core problem we tackle is this: there's a semantic gap between what an agent *intends* to do—its prompts and tool calls—and what the operating system *actually executes*—processes, syscalls, file and network operations. Traditional tools show you one side or the other, but they rarely connect the *why* to the *what*.
 
-Roadmap. I'll start with two short motivation examples—one about security, one about performance—then lay out the problem precisely, discuss the limits of current approaches, present the key idea and the challenges it must overcome, and conclude with the architecture, pipeline, implementation, and evaluation results. We'll finish with a quick open‑source tour and the main takeaways.
+**Our approach.** AgentSight observes agents at two critical boundaries. First, the network boundary—we capture prompts and responses as they pass through TLS. Second, the kernel boundary—we track processes, files, and sockets. By correlating these two streams, we can link concrete effects back to specific intents, then use an observer LLM to explain risks and inefficiencies in plain language.
+
+**Roadmap.** I'll start with two quick examples—security and performance. Then I'll define the problem, show why current approaches fall short, present our key idea and challenges, and walk through the architecture, implementation, and evaluation. We'll wrap up with a live demo and takeaways.
 
 
 
 ## Motivation — Security: Trusted Artifact Exfiltration
 
-Consider a security scenario that looks perfectly benign on paper. We ask the agent to *build and publish* a release; its plan is ordinary—`mvn package && mvn deploy`. The trouble hides in familiar tooling. A legacy or auto‑generated build step uses over‑broad globs and resource expansion, so a child process quietly reads sensitive local files—like `~/.aws/credentials` or `.env`—and stashes those bytes in a non‑obvious location inside the artifact; for Java this might be `META‑INF/.aws/credentials` inside the JAR. The next step is a normal deploy to the company's internal registry.
+Let's start with a security example. Imagine you ask an agent to build and publish a release. The plan looks normal: run `mvn package` then `mvn deploy`.
 
-From the outside, everything appears normal: the prompt contains no adversarial instruction; the processes (`mvn`, `jar`, `tar`, `rsync`) are expected; the egress is a trusted first‑party service. What's missing is the causal link. We need to show that a benign intent ("publish a release") immediately preceded sensitive reads and artifact writes that contradict policy. This is the kind of case where looking only at prompts or only at syscalls fails—what matters is the connection between them.
+But here's what happens under the hood. A legacy build step uses overly broad globs—maybe some auto-generated resource expansion—and a child process quietly reads sensitive files like `~/.aws/credentials` or your `.env` file. Then it stashes those credentials inside the JAR artifact, say in `META-INF/.aws/credentials`. Finally, the agent deploys this artifact to your internal registry—everything looks routine.
+
+From the outside, nothing seems wrong. The prompt has no adversarial text. The processes—`mvn`, `jar`, `tar`, `rsync`—are all expected. The upload goes to a trusted internal service.
+
+What's missing is the *causal link*. We need to connect the dots: a benign-sounding intent—"publish a release"—directly led to reading sensitive files and bundling them into an artifact. If you only look at prompts, you miss the exfiltration. If you only look at syscalls, you can't tell routine work from a policy violation. You need both.
 
 
 
 ## Motivation — Performance: Who Burned CPU/Memory?
 
-Now a performance and cost example. In agentic workflows, bursts of CPU or memory usage often seem to come from nowhere. Was it a long‑running tool, a heavy prompt/response, a retrying loop, or a large retrieval/storage step? Without attribution, it’s easy to optimize the wrong thing.  
+Now let's talk about performance. In agent workflows, you'll often see sudden spikes in CPU or memory—but where did they come from? Was it a long-running tool? A huge prompt? A retry loop? A big retrieval step? Without attribution, you're guessing.
 
-Two observations make this urgent. First, we can join prompts and commands with resource metrics to see *exactly* which LLM response or subprocess drove a spike. Second, recent evidence shows the environment around the model can dominate end‑to‑end cost: serverless execution overhead for agents can be ≥ 40% of total cost, and in some settings up to 70% of the cost of the LLM API calls. In other words, a large share of spend and latency sits outside the model invocation. With clear attribution, we can fix bad loops or arguments, cache expensive steps, and target hot spots in retrieval and storage that need engineering attention.
+Here's why this matters. Recent studies show that the *infrastructure* around the model can dominate total cost. Serverless overhead alone can be 40% or more of your total spend—in some cases up to 70% of what you pay for LLM API calls. That means most of your cost and latency is *outside* the model itself.
+
+To fix this, we need to join prompts and commands with resource metrics. That way, we can pinpoint exactly which LLM response or subprocess burned resources. Then we can fix retry loops, tune arguments, cache expensive operations, and optimize hot spots in retrieval and storage.
 
 
 
 ## Motivation: Agentic Systems in Production
 
-Stepping back, today's agents modify files, spawn processes, and run commands autonomously. That power brings non‑determinism: the same high‑level goal can unfold as different low‑level sequences across runs. For production teams, this complicates both reliability (was the outcome correct and reproducible?) and security (did anything happen that wasn't intended?).
+Let's step back. Today's agents modify files, spawn processes, and run commands autonomously. That's powerful, but it brings non-determinism—the same high-level goal can produce different low-level execution sequences each time. For production teams, this complicates both reliability and security.
 
-Traditional monitoring splits the world in two. Application‑side telemetry shows the plan—prompts, tool calls, and high‑level events—but not the OS‑level consequences. System‑side telemetry shows the effects—processes, files, sockets—but not the motivation behind them. When those views aren't reconciled, it's hard to judge whether a run was safe and efficient or why it wasn't. That gap motivates the rest of the talk.
+Traditional monitoring splits the world in two. Application-side telemetry shows the plan—prompts, tool calls, high-level events—but not what happens at the OS level. System-side telemetry shows processes, files, and sockets—but not *why* those actions occurred. When these views aren't connected, it's hard to know if a run was safe and efficient, or where things went wrong. That gap motivates the rest of this talk.
 
 
 
 ## The Semantic Gap (Why vs. What)
 
-We call this the semantic gap between why and what. Intent arrives as natural‑language goals and LLM responses. Actions materialize as syscalls, process trees, file and network I/O. For example, a *refactor* task might pick up a hidden prompt from a web page, triggering `/etc/passwd` exfiltration. App‑level logs frame it as a successful tool action; OS‑level logs show a curl and some file reads. Neither alone tells you that the actions contradict the goal.
+Let's define this gap more precisely. On one side, you have *intent*—natural language goals and LLM responses. On the other, you have *actions*—syscalls, process trees, file and network operations.
 
-The core observability question becomes: *Can we causally link a particular LLM output to the concrete system behavior that followed?* Doing so requires more than pattern‑matching—it requires grounded attribution at the system boundary and a semantic interpretation that says whether the behavior is consistent with the intent.
+Here's a concrete example. Say you ask an agent to refactor some code. It might pick up a hidden prompt injection from a web page, which triggers exfiltration of `/etc/passwd`. Application logs show a successful tool execution. OS logs show a curl command and some file reads. But neither side tells you that the *actions contradict the original goal*.
+
+The core question is: Can we causally link a particular LLM output to the concrete system behavior that followed? That requires more than pattern matching—it requires grounded attribution at system boundaries and semantic interpretation to judge whether the behavior matches the intent.
 
 
 
 ## Limits of Existing Approaches
 
-Why don't existing approaches solve this by default? Intent‑side solutions rely on inserting an SDK/instrumentation into the agent application. That's feasible for code you own, but impossible for closed‑source agents such as Claude Code. As soon as you rely on third‑party binaries, you lose the ability to instrument their internals.
+Why don't existing tools solve this? Let's look at three approaches.
 
-On the other side, action‑side tools like Falco or Tracee produce comprehensive OS events—exactly what ran—but without any semantic link to intent, it's hard to tell routine automation from misuse. And while interpretability gives insight into model internals, it typically doesn't account for external OS effects. The missing piece is a technique that unifies intent and effects without assuming control over agent source code.
+First, *intent-side* solutions—these rely on SDKs or instrumentation inside the agent application. That works for code you control, but it's impossible for closed-source agents like Claude Code. Once you depend on third-party binaries, you can't instrument their internals.
+
+Second, *action-side* tools like Falco or Tracee. These produce comprehensive OS events—every syscall, every process. But without a semantic link to intent, it's hard to distinguish routine automation from malicious behavior.
+
+Third, *interpretability* research focuses on model internals—attention patterns, hidden states. But it typically doesn't account for external OS effects like file writes or network connections.
+
+What's missing is a technique that unifies intent and effects *without* requiring access to agent source code.
 
 
 
 ## Key Idea: Boundary Tracing
 
-Our key idea is boundary tracing. Instead of instrumenting inside agent frameworks, we observe at stable system interfaces that all agents must traverse. At the network boundary, we attach uprobes to TLS functions such as `SSL_read` and `SSL_write` to recover plaintext LLM traffic—prompts and responses after decryption, before they leave or arrive. At the kernel boundary, we attach kprobes/tracepoints to capture process lineage and key syscalls that reflect real work—`execve`, `openat2`, `connect`, and so on.
+Our key idea is *boundary tracing*. Instead of instrumenting inside agent frameworks, we observe at stable system interfaces that all agents must cross.
 
-Because we watch boundaries, the approach is framework‑agnostic and requires no code changes to the agent or its tools. Shell escapes and subprocesses are still visible. Boundary tracing lays the substrate for correlating why to what.
+At the *network boundary*, we use eBPF uprobes on TLS functions—`SSL_read` and `SSL_write`—to capture plaintext LLM traffic. We get prompts and responses after decryption, before they leave or arrive.
+
+At the *kernel boundary*, we use eBPF kprobes and tracepoints to capture process lineage and key syscalls—`execve`, `openat2`, `connect`, and others that reflect real work.
+
+Because we watch these boundaries, the approach is framework-agnostic and requires zero code changes. Shell escapes and subprocesses stay visible. Boundary tracing gives us the foundation to correlate *why* to *what*.
 
 
 
 ## Challenges (3.1)
 
-Two challenges from the paper drive the design.
+This approach faces two main challenges.
 
-First, bridging the semantic gap between intent and action. An agent's intent is expressed in natural language and interpreted at runtime by an LLM—there is no fixed source code for static analysis. For example, the intent "find and fix the bug" is semantically rich but operationally ambiguous, potentially resulting in complex sequences of file reads, compilations, and test runs. This creates two sub-problems: we cannot predict which syscalls will occur a priori, making traditional static analysis impossible; and we must interpret a correlated trace to decide whether the syscall cascade legitimately fulfills the stated goal—a semantic judgment requiring an observer LLM.
+**First challenge: bridging the semantic gap.** An agent's intent is expressed in natural language and interpreted at runtime by an LLM. There's no fixed source code we can analyze statically. For example, "find and fix the bug" is semantically rich but operationally vague—it could trigger file reads, compilations, test runs. We face two sub-problems: we can't predict which syscalls will occur ahead of time, so static analysis doesn't work. And we need to interpret the correlated trace to decide if the syscalls legitimately fulfill the goal—that's a semantic judgment that requires an observer LLM.
 
-Second, isolating the causal signal from system noise. Agents autonomously spawn arbitrary tools—shells, compilers, downloaders, test runners—leading to unpredictable, high-volume event streams. Static filters like "only watch `git`" are brittle and fail when agents use `curl` and `bash` to achieve similar outcomes. Our solution has two parts: dynamic in-kernel filtering that tracks fork/exec to build a complete lineage tree and applies rules in the kernel to pass only agent-descendant events to userspace; and efficient capture that keeps the entire causal chain while discarding background noise, dramatically reducing overhead.
+**Second challenge: isolating signal from noise.** Agents spawn arbitrary tools—shells, compilers, test runners—leading to high-volume, unpredictable event streams. Static filters like "only watch git" break when agents use curl or bash instead. Our solution has two parts. One, dynamic in-kernel filtering that tracks fork and exec to build a complete lineage tree, then applies rules in the kernel to pass only agent-descendant events to userspace. Two, efficient capture that keeps the full causal chain while discarding background noise, which dramatically reduces overhead.
 
 
 
 ## Architecture Overview
 
-The architecture has two data streams. First, the intent stream: we use eBPF uprobes on SSL_read and SSL_write to capture plaintext prompts and responses at the network boundary. Second, the action stream: we use eBPF kprobes and tracepoints to capture process creation, file operations, and network I/O at the kernel boundary.
+The architecture has two data streams.
 
-A userspace daemon performs real-time correlation of both streams. It also runs an observer LLM that interprets the correlated trace to explain what happened and whether it's consistent with the stated goal.
+First, the *intent stream*—we use eBPF uprobes on `SSL_read` and `SSL_write` to capture plaintext prompts and responses at the network boundary.
+
+Second, the *action stream*—we use eBPF kprobes and tracepoints to capture process creation, file operations, and network I/O at the kernel boundary.
+
+A userspace daemon correlates both streams in real time. It also runs an observer LLM that interprets the correlated trace, explains what happened, and checks whether it's consistent with the original goal.
 
 
 
 ## From Signals → Causality → Semantics
 
-Here is the pipeline in one slide. Capture intent at TLS and effects at the kernel boundary, aggressively filtering in‑kernel so only relevant events leave the kernel. Correlate using three signals: process lineage to attribute child actions to the initiating agent; a short Δt window (on the order of 100–500 ms) to link events that follow an LLM response; and argument matching to connect concrete strings—filenames, URLs, command arguments—between the LLM output and the later syscalls.  
+Here's the full pipeline in one slide.
 
-Then explain. An observer LLM reads the structured trace and flags risks (e.g., data exfiltration inconsistent with the goal), inconsistencies (e.g., a publish step bundling credentials), and waste (e.g., a retry loop with no learning), returning a confidence score. We run this analysis asynchronously to avoid blocking the agent.
+**Capture.** We capture intent at the TLS layer and effects at the kernel boundary, using aggressive in-kernel filtering so only relevant events make it to userspace.
+
+**Correlate.** We use three signals. First, process lineage—to attribute child actions back to the agent that started them. Second, a short time window—around 100 to 500 milliseconds—to link events that follow an LLM response. Third, argument matching—to connect concrete strings like filenames, URLs, or command arguments between the LLM output and the syscalls that follow.
+
+**Explain.** An observer LLM reads the structured trace and flags issues—data exfiltration that doesn't match the goal, credential bundling in a publish step, retry loops that waste resources. It returns a confidence score. We run this analysis asynchronously so it doesn't block the agent.
 
 
 
 ## Implementation
 
-Implementation‑wise, AgentSight is a userspace daemon (~6 K LOC in Rust/C) that orchestrates the eBPF programs, along with a TypeScript UI (~3 K LOC) for exploration. The daemon maps file descriptors to paths, maintains process trees, and streams kernel and intent signals into unified, human‑readable traces. Because we instrument boundaries, not frameworks, the system is framework‑agnostic and remains resilient to API churn in agent libraries and tools.
+On the implementation side, AgentSight is a userspace daemon—about 6,000 lines of Rust and C—that orchestrates the eBPF programs. There's also a TypeScript UI with about 3,000 lines for exploration.
+
+The daemon maps file descriptors to paths, maintains process trees, and streams both kernel and intent signals into unified, human-readable traces.
+
+Because we instrument boundaries and not frameworks, the system is framework-agnostic and stays resilient to API changes in agent libraries and tools.
 
 
 
 ## Evaluation (One Slide)
 
-Let me summarize evaluation in one slide. We tested on Ubuntu 22.04 (Linux 6.14) with Claude Code 1.0.62 across repository understanding, code writing, and compilation. The average runtime overhead is ~2.9%, with a worst case of ~4.9%. That small footprint reflects in‑kernel filtering and lightweight correlation: we only export events we truly need.  
+Let me summarize the evaluation in one slide.
 
-In terms of findings, the system detected prompt injection (as in our earlier story), identified resource‑wasting loops that retried the same failing tool call, and surfaced stealthy exfiltration via trusted channels. In multi‑agent runs, the unified trace revealed file‑lock contention and sequential dependencies, and simply clarifying roles reduced both wall‑clock time and token usage. In short: the approach provides actionable signal without demanding application changes.
+**Setup and overhead.** We tested on Ubuntu 22.04 with Linux 6.14 and Claude Code 1.0.62, running tasks like repository understanding, code writing, and compilation. Average runtime overhead is about 2.9%, with a worst case around 4.9%. That small footprint comes from in-kernel filtering and lightweight correlation—we only export the events we actually need.
+
+**Security and performance findings.** The system detected prompt injection—like the security example I showed earlier. It identified resource-wasting retry loops where the agent kept calling the same failing tool. And it caught stealthy exfiltration over trusted channels.
+
+**Multi-agent results.** In multi-agent runs, the unified trace revealed file-lock contention and sequential dependencies. Just clarifying roles between agents reduced both wall-clock time and token usage. Bottom line: the approach delivers actionable insights without requiring any application changes.
 
 
 
 ## Open Source & Quick Start
 
-AgentSight is open source. It observes at the system boundary using eBPF, which makes it tamper‑resistant and keeps overhead low. Just as important, it requires zero instrumentation—no SDKs and no code changes—so it works with any AI framework or closed‑source agent.
+AgentSight is fully open source. Because it observes at the system boundary using eBPF, it's tamper-resistant and keeps overhead low. More importantly, it requires zero instrumentation—no SDKs, no code changes—so it works with any AI framework, including closed-source agents.
 
-Quick start. Download the release binary, run `agentsight record` against the process you care about—`claude` for Claude Code, `node` for Gemini‑CLI, or `python` for Python tools—and open http://127.0.0.1:7395 to explore the data. For cases where Node bundles OpenSSL statically, the `--binary-path` option lets you point at `/usr/bin/node` so the TLS uprobes attach correctly. This lowers the barrier to entry so you can reproduce our results and analyze your own agents quickly.
+**Quick start.** Download the release binary, run `agentsight record` against the process you want to monitor—use `claude` for Claude Code, `node` for Gemini CLI, or `python` for Python-based tools. Then open http://127.0.0.1:7395 to explore the data.
+
+If you're using Node and it bundles OpenSSL statically, just add the `--binary-path` flag pointing to `/usr/bin/node` so the TLS uprobes attach correctly. This makes it easy to reproduce our results and analyze your own agents.
 
 
 
 ## Frontend Demos
 
-The UI offers three complementary views that make analysis fast. The Process Tree shows agent‑initiated processes and file operations as they happen, so you can visually follow forks, execs, and the effects of specific steps. The Timeline aligns prompts and responses with the system calls that follow, making causality easier to spot at a glance. The Metrics view attributes CPU and memory usage to concrete prompts and tools, so performance work starts with facts, not guesswork.
+The UI has three complementary views that make analysis fast.
 
-Together these views answer three practical questions: *What did the agent do? Why did it do that?* and *How much did it cost in resources?* That combination is what turns raw telemetry into operational decisions—for example, "this publish step should not read credential files," or "cache this retrieval to cut 40% off the critical path."
+The **Process Tree** shows agent-initiated processes and file operations as they happen—you can visually follow forks, execs, and the effects of each step.
+
+The **Timeline** aligns prompts and responses with the syscalls that follow, making causality easy to spot at a glance.
+
+The **Metrics view** attributes CPU and memory usage to specific prompts and tools, so you know exactly where resources are going.
+
+Together, these views answer three key questions: *What did the agent do?* *Why did it do that?* And *how much did it cost?* That combination turns raw telemetry into actionable decisions—like "this publish step shouldn't read credential files," or "cache this retrieval to cut 40% off the critical path."
 
 
 
 ## Limitations, Future Work, Takeaways
 
-To close, a few limitations and the takeaway. Our correlation uses heuristic windows and argument matching; in edge cases this can miss links or over‑link events. The observer model adds some cost and latency, though we run it asynchronously. Finally, cross‑host correlation is active future work; many agent deployments span multiple machines or containers.
+Let me wrap up with a few limitations and the main takeaway.
 
-Those are also directions: move from observability to inline guardrails and enforcement, broaden platform support, and extend lineage across hosts. The takeaway is simple: observing at stable system boundaries, then correlating intent to effects and explaining with an observer LLM, gives you low‑overhead, tamper‑resistant insight into both security and performance of agentic systems—without touching their code. That's the gap AgentSight is designed to close.
+**Limitations.** Our correlation relies on heuristic windows and argument matching—in edge cases, we might miss links or incorrectly connect events. The observer model adds some cost and latency, though we run it asynchronously to minimize impact. And cross-host correlation is still active work—many agent deployments span multiple machines or containers.
+
+**Future directions.** We're moving from pure observability toward inline guardrails and enforcement. We're also broadening platform support and working on extending lineage tracking across hosts.
+
+**The takeaway.** By observing at stable system boundaries, correlating intent to effects, and explaining with an observer LLM, AgentSight delivers low-overhead, tamper-resistant insight into both security and performance of agentic systems—without touching their code. That's the gap we're closing.
+
+Thank you.
 
 
 ---
@@ -153,8 +203,8 @@ Andi Quinn
 # Slide 3 — Motivation — Performance: Who Burned CPU/Memory?
 
 - Agent infrastructure can dominate: serverless env ≥40% of total; up to 70% of LLM API cost
-- The need of optimize heavy steps: fix loops/args, long run tools, tune retrieval/storage
-- Requires join prompts/commands with CPU & memory to attribute spikes
+- Need to optimize heavy steps: fix loops/args, long-running tools, tune retrieval/storage
+- Requires joining prompts/commands with CPU & memory to attribute spikes
 
 
 ---
@@ -212,7 +262,7 @@ Andi Quinn
 # Slide 10 — From Signals → Causality → Semantics
 
 * Capture: intent via TLS; effects via `exec`/`fork` + `openat2`/`connect`/`execve` with in-kernel filters
-* Correlate: lineage + short Δt (≈ 100–500 ms) + argument matching, observer LLM correlate the intend and actions, dynamically adjust filtering rules
+* Correlate: lineage + short Δt (≈ 100–500 ms) + argument matching; observer LLM correlates intent and actions, dynamically adjusts filtering rules
 
 ---
 
