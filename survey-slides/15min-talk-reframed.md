@@ -4,7 +4,7 @@ Academic Survey-First Structure (15 min)
 
 ---
 
-## Flow (17 slides total, ≈17-18 min — expanded with formal definitions, requirements, evaluation)
+## Flow (15 slides total, ≈15 min — streamlined with merged industrial survey)
 
 1. Title & Contributions (1 slide)
 2. State & Motivation: Safety under uncertainty / IPI (1 slide)
@@ -14,15 +14,13 @@ Academic Survey-First Structure (15 min)
 6. Background I: APM/Serving (what it gives & what it misses) (1 slide)
 7. Background II: Model-centric tools (capabilities & limits) (1 slide)
 8. Background III: Agent-level frameworks (what they do & gaps) (1 slide)
-9. Extended Survey: Industrial landscape (APM/Serving → LLM → Agent) (1 slide)
-10. Extended Survey: Practices shown in talks/slides (1 slide)
-11. Extended Survey: Why SDK-only is insufficient operationally (1 slide)
-12. Academic signals: Safety (IPI), Cost escalation & Balanced view (1 slide)
-13. Formal: Two Gaps & Requirements (1 slide)
-14. Standards & ecosystem (Why now) (1 slide)
-15. Vision: Two-Plane Architecture (overview) (1 slide)
-16. Vision: Data Plane (evidence & practice) (1 slide)
-17. Vision: Cognitive Plane (algorithms & outputs) (1 slide)
+9. Industrial Landscape: Three Tiers + Adoption + SDK Limitations (1 slide)
+10. Academic signals: Safety (IPI), Cost escalation & Balanced view (1 slide)
+11. Formal: Two Gaps & Requirements (1 slide)
+12. Standards & ecosystem (Why now) (1 slide)
+13. Vision: Two-Plane Architecture (overview) (1 slide)
+14. Vision: Data Plane (evidence & practice) (1 slide)
+15. Vision: Cognitive Plane (algorithms & outputs) (1 slide)
 
 
 ## Slides
@@ -508,9 +506,9 @@ Speaker Script (0:50):
 
 ---
 
-### 9) Extended Survey: Industrial Landscape (0:50)
+### 9) Industrial Landscape: Three Tiers + Adoption + SDK Limitations (1:30)
 
-Three-tier landscape
+**Part A: Three-Tier Landscape**
 
 | Layer | Tools | Integration | OTel? | Strengths | Limits |
 |-------|-------|------------|-------|-----------|--------|
@@ -523,16 +521,9 @@ Sources:
 - LLM-centric: [LangSmith](https://docs.langchain.com/langsmith/observability), [Langfuse OTLP](https://langfuse.com/docs/integrations/opentelemetry), [OpenInference](https://arize.com/docs/ax/observe/tracing/tracing-concepts/what-is-openinference)
 - Agent-level: [Maxim AI](https://www.getmaxim.ai/articles/agent-tracing-for-debugging-multi-agent-ai-systems/), [PostHog](https://posthog.com/blog/best-open-source-llm-observability-tools)
 
-Visual: 3-column landscape matrix with checkmarks for OTel support
-
-Speaker Script (0:50):
-"Zooming out to today's industrial landscape, we see three tiers. Serving and APM—vLLM and NVIDIA Triton—provide production Prometheus metrics and dashboards with Perf Analyzer for throughput and latency tuning. LLM-centric tooling is converging on OpenTelemetry GenAI semantics via OpenInference and OpenLLMetry. Critically, Langfuse can ingest OTLP traces directly, acting as an OTel backend. Commercial platforms like Honeycomb and Datadog have launched LLM Observability products. Then agent-level platforms like Maxim, PromptLayer, and LangKit add trajectory views, evaluations, and text metrics. The key observation: OTel compatibility is emerging as the interoperability layer."
-
 ---
 
-### 10) Extended Survey: Practices in Industry Talks (0:50)
-
-Industry reference architectures (2024-2025)
+**Part B: Industry Reference Architectures (2024-2025)**
 
 KubeCon / Cloud Native Summit:
 - GenAI Framework Observability (Adrian Cole, 2024)
@@ -555,14 +546,9 @@ Vendor conferences:
 - Arize Observe 2025: OpenInference updates, production case studies
 - LangChain Interrupt 2025: Agent reliability & observability patterns
 
-Visual: "Reference architectures" tile with 2-3 credible architecture diagrams (OTel spans → backends; Prom metrics → Grafana)
-
-Speaker Script (0:50):
-"Industry reference architectures are converging on best practices. Adrian Cole's KubeCon talk on GenAI Framework Observability covers OTel GenAI semantic conventions plus MCP updates and shows agent span patterns in practice. The OpenTelemetry AI Agent Observability blog tracks evolving standards and multi-vendor telemetry exchange. Production monitoring patterns combine OTel and Prometheus: IBM and GCP use vLLM exporters with Grafana dashboards. The pattern is model spans via OTel, infra metrics via Prometheus, correlated by trace ID. Vendor conferences like Arize Observe 2025 and LangChain Interrupt 2025 are sharing production case studies and agent reliability patterns."
-
 ---
 
-### 11) Extended Survey: Why SDK-Only Is Insufficient (0:50)
+**Part C: Why SDK-Only Is Insufficient**
 
 Managed/closed-source components make SDK injection impractical
 
@@ -586,18 +572,27 @@ Implication:
 - Boundary-based capture (network, TLS, syscalls) + standardized spans (OTel GenAI) are the pragmatic path
 - Can correlate external observations (TLS plaintext, process events, model API responses) without modifying proprietary code
 
-Visual: Diagram showing "Where SDKs cannot go" — IDE (closed), OS agent (closed), SaaS API (closed) — vs. "Where boundaries are observable" — TLS layer, syscall layer, API responses
-
 Sources:
 - [Anthropic Claude Code](https://anthropic.com/news/enabling-claude-code-to-work-more-autonomously)
 - [Microsoft Build 2025](https://blogs.microsoft.com/blog/2025/05/19/microsoft-build-2025-the-age-of-ai-agents-and-building-the-open-agentic-web/)
 
-Speaker Script (0:50):
-"Operationally, you cannot always inject SDKs into the runtime. Managed or closed-source components exist throughout the stack. Examples: Developer agents like Claude Code in VS Code, JetBrains, and terminal; GitHub Copilot embedded in IDEs; Cursor as a forked VS Code—all closed-source binaries with proprietary integrations. OS and platform integrations like Windows Copilot, Copilot Studio, and first-party MCP servers from Microsoft and Google. SaaS model providers—OpenAI, Anthropic, Google APIs—where you have no access to internal serving infrastructure. The pragmatic path is boundary-based capture—network, TLS, syscalls—plus standardized spans via OTel GenAI for correlation, without modifying proprietary code."
+---
+
+Visual:
+- Top: 3-column landscape matrix with OTel checkmarks
+- Middle: Reference architecture diagram (OTel spans → backends; Prom metrics → Grafana)
+- Bottom: Split diagram showing "Where SDKs cannot go" (IDE/OS/SaaS closed) vs "Where boundaries are observable" (TLS/syscall/API layers)
+
+Speaker Script (1:30):
+"Let me survey the industrial landscape across three dimensions. First, the three-tier stack. Serving and APM—vLLM and NVIDIA Triton—provide production Prometheus metrics and dashboards with Perf Analyzer for throughput and latency tuning. LLM-centric tooling is converging on OpenTelemetry GenAI semantics via OpenInference and OpenLLMetry. Critically, Langfuse can ingest OTLP traces directly, acting as an OTel backend. Commercial platforms like Honeycomb and Datadog have launched LLM Observability products. Then agent-level platforms like Maxim, PromptLayer, and LangKit add trajectory views, evaluations, and text metrics. The key observation: OTel compatibility is emerging as the interoperability layer.
+
+Second, industry reference architectures are converging on best practices. Adrian Cole's KubeCon talk on GenAI Framework Observability covers OTel GenAI semantic conventions plus MCP updates and shows agent span patterns in practice. The OpenTelemetry AI Agent Observability blog tracks evolving standards and multi-vendor telemetry exchange. Production monitoring patterns combine OTel and Prometheus: IBM and GCP use vLLM exporters with Grafana dashboards. The pattern is model spans via OTel, infra metrics via Prometheus, correlated by trace ID. Vendor conferences like Arize Observe 2025 and LangChain Interrupt 2025 are sharing production case studies and agent reliability patterns.
+
+Third, operationally, you cannot always inject SDKs into the runtime. Managed or closed-source components exist throughout the stack. Examples: Developer agents like Claude Code in VS Code, JetBrains, and terminal; GitHub Copilot embedded in IDEs; Cursor as a forked VS Code—all closed-source binaries with proprietary integrations. OS and platform integrations like Windows Copilot, Copilot Studio, and first-party MCP servers from Microsoft and Google. SaaS model providers—OpenAI, Anthropic, Google APIs—where you have no access to internal serving infrastructure. The pragmatic path is boundary-based capture—network, TLS, syscalls—plus standardized spans via OTel GenAI for correlation, without modifying proprietary code."
 
 ---
 
-### 12) Academic Signals: Safety, Cost & Balanced View (1:15)
+### 10) Academic Signals: Safety, Cost & Balanced View (1:15)
 
 **Threat Model: Indirect Prompt Injection (IPI)**
 
@@ -690,7 +685,7 @@ Speaker Script (1:15):
 
 ---
 
-### 13) Formal: Two Gaps & Requirements Derivation (0:45)
+### 11) Formal: Two Gaps & Requirements Derivation (0:45)
 
 The Two Fundamental Gaps (from your paper)
 
@@ -859,7 +854,7 @@ Speaker Script (0:45):
 
 ---
 
-### 14) Standards & Ecosystem (Why Now) (0:45)
+### 12) Standards & Ecosystem (Why Now) (0:45)
 
 OpenTelemetry GenAI: Stable conventions & ecosystem momentum
 - Stable semantic conventions: model spans, agent spans, events, metrics
@@ -900,7 +895,7 @@ Speaker Script (0:45):
 
 ## Vision (3 slides) — from paper
 
-### 15) Vision: Two-Plane Architecture (Overview) (1:00)
+### 13) Vision: Two-Plane Architecture (Overview) (1:00)
 
 Data Plane:
 - Capture cross-layer events at stable boundaries (model/network/TLS, system/process, human feedback)
@@ -929,7 +924,7 @@ Speaker Script (1:00):
 
 ---
 
-### 16) Vision: Data Plane (Evidence & Practice) (1:00)
+### 14) Vision: Data Plane (Evidence & Practice) (1:00)
 
 System layer:
 - Process/file/subprocess captured by Tetragon (eBPF tool)
@@ -963,7 +958,7 @@ Speaker Script (1:00):
 
 ---
 
-### 17) Vision: Cognitive Plane (Algorithms & Outputs) (1:00)
+### 15) Vision: Cognitive Plane (Algorithms & Outputs) (1:00)
 
 Algorithms:
 - Semantic evaluation: hallucination/loop/tool-misuse detection
