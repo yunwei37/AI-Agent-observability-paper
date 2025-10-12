@@ -913,12 +913,13 @@ Agent observability is the capability to:
 
 ## Vision (3 slides) — from paper
 
-### 20) Vision: Two-Plane Architecture (Overview) (0:55)
+### 20) Vision: Two-Plane Architecture (Overview) (1:00)
 
 **Data Plane:**
 - Capture cross-layer events at **stable boundaries** (model/network/TLS, system/process, human feedback)
 - **No in-app SDK required**, suitable for **closed-source/managed** components
 - Unify mapping to **OTel GenAI agent/model spans**
+- **Privacy-first:** Redaction at probe time, sampling (1-10% full, 90-99% metadata), scoped retention
 - *Source: [OTel GenAI](https://opentelemetry.io/docs/specs/semconv/gen-ai/)*
 
 **Cognitive Plane:**
@@ -930,9 +931,15 @@ Agent observability is the capability to:
 - Cognitive plane provides interpretation & governance
 - Together form **safety/cost/control** closed loop
 
+**Key Metrics:**
+- **Security:** Attack capture rate, MTTA, trajectory completeness
+- **Cost:** $/successful task, tokens/solve, runaway-loop prevention
+- **Reliability:** Agent incident MTTR, tool-success ratio, quiet failure detection
+- **Standards:** OTel GenAI conformance, MCP tool coverage, cross-vendor correlation
+
 ---
 
-### 21) Vision: Data Plane (Evidence & Practice) (0:55)
+### 21) Vision: Data Plane (Evidence & Practice) (1:00)
 
 **System layer:**
 - Process/file/subprocess captured by **Tetragon** (eBPF tool)
@@ -955,9 +962,15 @@ Agent observability is the capability to:
 - Structured human feedback as ground truth
 - Evaluation data feeds cognitive plane
 
+**Deployment Path (90 Days):**
+- **P0 (Weeks 1-2):** Boundary tracing (eBPF syscalls, TLS metadata, minimal model I/O spans)
+- **P1 (Weeks 3-4):** Adopt OTel GenAI agent spans, bridge with OpenInference/OpenLLMetry
+- **P2 (Weeks 5-8):** Deploy cognitive observability agents (Watson-style)
+- **P3 (Weeks 9-12):** Multi-agent causal graphs, compliance/audit pipelines, MCP-aware capture
+
 ---
 
-### 22) Vision: Cognitive Plane (Algorithms & Outputs) (0:55)
+### 22) Vision: Cognitive Plane (Algorithms & Outputs) (1:00)
 
 **Algorithms:**
 - Semantic evaluation: hallucination/loop/tool-misuse detection
@@ -971,125 +984,13 @@ Agent observability is the capability to:
 - ② Cost budgets & rate limiting (fallback policies/shutdown conditions)
 - ③ **Auditable** multi-agent causal chains & summaries
 
----
-
-### 23) Evaluation Plan & Metrics (0:45)
-
-**Security Metrics:**
-- **Attack capture rate:** % of IPI attacks detected (InjecAgent benchmark)
-- **MTTA (Mean Time To Acknowledge):** How fast semantic regressions are flagged
-- **Trajectory completeness:** % of agent actions with full causal chain captured
-- *Source: [InjecAgent ACL 2024](https://aclanthology.org/2024.findings-acl.624/)*
-
-**Cost Metrics:**
-- **$/successful task:** End-to-end cost per completed objective
-- **Tokens/solve:** Token efficiency per problem solved
-- **Runaway-loop prevention:** % of infinite/high-cost loops caught by budget policies
-- **Cost attribution accuracy:** % of costs correctly mapped to agent decisions
-- *Source: [S²-MAD NAACL 2025](https://aclanthology.org/2025.naacl-long.475.pdf)*
-
-**Reliability Metrics:**
-- **Agent incident MTTR:** Mean time to resolve agent failures
-- **Tool-success ratio:** % of tool invocations that achieve intended outcome
-- **Causal graph completeness:** % of spans with complete cross-layer linkage
-- **Quiet failure detection rate:** % of semantic failures (hallucination, drift) detected
-
-**Standards & Interoperability Metrics:**
-- **OTel GenAI conformance:** % of spans conforming to agent span conventions
-- **MCP tool coverage:** # of MCP servers exercised per workflow
-- **Cross-vendor correlation:** % of multi-vendor traces successfully correlated
-- *Source: [OTel GenAI Agent Spans](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-agent-spans/)*
-
-**Visual:** Dashboard mockup showing these 4 metric categories
-
----
-
-### 24) Deployment Path (90 Days) (0:45)
-
-**P0: Boundary Tracing (Weeks 1-2)**
-- **Boundary tracing** around agent processes:
-  - eBPF syscall capture (execve, file I/O) via **Tetragon**
-  - TLS metadata capture (connection tracking, SNI)
-- Minimal model I/O spans (tokens, latency, basic attributes)
-- **Privacy defaults:** masking PII, sampling (e.g., 10% full capture)
-- *Source: [Tetragon](https://tetragon.io/)*
-
-**P1: Adopt Standards (Weeks 3-4)**
-- Implement **OTel GenAI agent spans** (goals, reasoning, tool calls, events)
-- Bridge with **OpenInference/OpenLLMetry/Langfuse OTel** to reduce SDK sprawl
-- Map boundary events → OTel spans for unified backend
-- *Source: [OTel GenAI](https://opentelemetry.io/docs/specs/semconv/gen-ai/)*
-
-**P2: Observability Agents (Weeks 5-8)**
-- Deploy **cognitive observability agents** (Watson-style):
-  - Semantic evals (hallucination, loop, tool misuse)
-  - Trajectory reconstruction & RCA
-  - Spend policy enforcement (budget caps, loop-stop conditions)
-- Define escalation playbooks (quarantine, alert, human-in-loop)
-- *Source: [Watson arXiv](https://arxiv.org/abs/2411.03455)*
-
-**P3: Multi-Agent Causal Graphs (Weeks 9-12)**
-- **Multi-agent causal graphs:** correlate decisions → model calls → system actions → costs
-- **Compliance/audit pipelines:** structured reports for regulatory review
-- **MCP-aware capture:** as tool surface expands (Windows/Azure MCP), instrument new integrations
-- *Sources: [MCP Spec](https://modelcontextprotocol.io/specification/latest), [Windows Blog](https://blogs.microsoft.com/blog/2025/05/19/microsoft-build-2025-the-age-of-ai-agents-and-building-the-open-agentic-web/)*
-
-**Visual:** Gantt chart showing P0-P3 phases with dependencies
-
----
-
-### 25) Privacy & Compliance (0:45)
-
-**Threat: Overly invasive capture risks PII/compliance violations**
-
-**Privacy-preserving techniques:**
-
-**1. Redaction/Masking at probe time**
-- **Drop payloads, keep metadata:** Capture syscall names, timestamps, return codes — NOT file contents
-- **Example:** Log `open("/home/user/file.txt", O_RDONLY)` → redact to `open("/home/user/***", O_RDONLY)`
-- TLS capture: SNI, handshake metadata only — NOT plaintext bodies (unless explicitly allowed)
-
-**2. Sampling**
-- **Full capture (1-10%):** Complete syscalls, TLS plaintext, model I/O for deep investigation
-- **Metadata-only (90-99%):** High-level stats (tokens, latency, error rates) for monitoring
-- Adjust sampling dynamically based on risk (e.g., 100% for flagged agents)
-
-**3. Scoped retention & policy-driven filtering**
-- **Link agent spans → data policies:** Tag spans with PII/sensitivity levels (via OTel attributes)
-- **Retention policies:** 7 days for full traces, 90 days for aggregates, indefinite for audit logs
-- **Policy engine:** Auto-delete spans tagged as "contains-PII" after N days
-
-**4. Consent & transparency**
-- **User consent flows:** Notify when TLS plaintext capture is active (e.g., enterprise settings)
-- **Audit logs:** Record what was captured, when, by whom (for compliance review)
-
-**Standards integration:**
-- **OTel GenAI attributes:** Include `gen_ai.privacy.level` (e.g., "masked", "full", "none")
-- **MCP policy metadata:** MCP servers can declare data sensitivity for tools
-- *Sources: [OTel GenAI](https://opentelemetry.io/docs/specs/semconv/gen-ai/), [MCP Spec](https://modelcontextprotocol.io/specification/latest)*
-
-**Visual:** Privacy pipeline diagram: Raw event → Masking/Sampling → Policy engine → Retention → Audit
-
----
-
-## Optional Backup Slides
-
-### Security Evaluation Metrics
-
-**IPI (InjecAgent) → metrics:**
-- **Attack capture rate**
-- **MTTA (Mean Time To Acknowledge) for semantic regressions**
-- *Source: [InjecAgent](https://arxiv.org/abs/2403.02691)*
-
-### Cost Control Evidence
-
-**Multi-agent token escalation:**
-- Well-documented in literature
-- **S²-MAD** shows **token reduction** without performance loss
-- SLO/budget policies need: **$/task, tokens/solve**
-- *Source: [S²-MAD](https://arxiv.org/abs/2502.04790)*
-
----
+**Privacy & Compliance Integration:**
+- **Redaction/Masking:** Drop payloads, keep metadata (e.g., `open("/home/user/***")`)
+- **Sampling:** 1-10% full capture, 90-99% metadata-only
+- **Scoped retention:** 7d full traces, 90d aggregates, ∞ audit logs
+- **Policy-driven filtering:** Auto-delete PII-tagged spans after N days
+- **Standards:** OTel `gen_ai.privacy.level` attributes, MCP policy metadata
+- **Consent & transparency:** User notification, audit logs for compliance
 
 ## Industry Practice Evidence (Expanded Survey Details)
 
@@ -1150,184 +1051,6 @@ Agent observability is the capability to:
 - **Conclusion:** Boundary capture + standardized spans are pragmatic
 - *Source: [Claude Code](https://www.anthropic.com/engineering/claude-code-best-practices)*
 
----
-
-## Summary of Changes vs. Previous Version
-
-### What changed (and why it's better academically):
-
-1. **Added formal foundations (5 new slides):**
-   - **Slide 3:** Formal definition of Agent Observability (tuple ⟨G,Π,T,E⟩)
-   - **Slide 9:** Two Gaps (Instrumentation, Semantic) + Requirements (R1-R4) derivation
-   - **Slide 12:** Evaluation Plan & Metrics (Security, Cost, Reliability, Standards)
-   - **Slide 13:** Deployment Path (90 days, P0-P3 phases)
-   - **Slide 14:** Privacy & Compliance (redaction, sampling, policies)
-
-2. **Expanded survey (1→17 slides for sections 1-8, +5 formal slides = 22 content slides):**
-   - **Slide 2 (State) split into 3:** 2A Safety/IPI, 2B Cost, 2C Fragmentation
-   - **Slide 4 (APM/Serving) split into 2:** 4A What they give, 4B What they miss
-   - **Slide 5 (LLM-centric) split into 2:** 5A Tools & specs, 5B Limits
-   - **Slide 6 (Agent-level) split into 2:** 6A What they do, 6B What's missing
-   - **Slide 7 (Extended survey) split into 3:** 7A Landscape, 7B Practices, 7C Why SDK-only insufficient
-   - **Slide 8 (Academic signals) split into 3:** 8A IPI threat model, 8B Cost escalation, 8C Balanced view
-   - Each sub-slide has **concrete evidence, metrics, and sources**
-
-3. **Grounded in benchmarks & peer-reviewed papers:**
-   - **InjecAgent (ACL Findings 2024):** 1,054 cases, 30 agents, formal IPI attack model
-   - **S²-MAD (NAACL-25):** Token efficiency as first-class metric, confirms $/task SLIs
-   - **"Stop Overvaluing MAD" (arXiv):** Negative results, win/tie/lose ratios (balanced view)
-   - **ICLR-25 scaling:** ~7.5× token growth in certain regimes
-   - **Watson (arXiv):** Cognitive observability, surrogate observers
-
-4. **Industrial evidence & current events:**
-   - **3-tier landscape matrix** (APM/Serving, LLM-centric, Agent-level)
-   - **KubeCon/Cloud Native Summit** talks (Adrian Cole, OTel GenAI)
-   - **OTel Blog (Mar 6, 2025):** "AI Agent Observability" standardization
-   - **IBM, GCP, Arize** production patterns (Prom + OTel correlation)
-   - **MCP ecosystem news:**
-     - **Microsoft Build 2025:** Windows first-party MCP support
-     - **Reuters (May 19, 2025):** "Microsoft wants AI agents to work together"
-     - **The Verge:** Windows AI Foundry MCP, Anthropic MCP data sources
-     - Google Data Commons MCP servers
-
-5. **Managed/closed-source pragmatic framing:**
-   - Explicitly state parts of stack are **proprietary/managed** (Claude Code, Copilot, Cursor)
-   - Makes **in-process SDK injection infeasible**
-   - **Boundary-based capture** + **standard spans** (OTel GenAI) are pragmatic path
-   - Slide 7C dedicated to this point
-   - **No "tamper-resistant" language** — uses "boundary-based" + "managed components" framing
-
-6. **Formal requirements derivation (R1-R4):**
-   - **R1:** Decouple capture from app internals (Instrumentation gap → boundary capture)
-   - **R2:** Autonomous semantic analysis (Semantic gap → AI-driven understanding)
-   - **R3:** Cross-vendor schema (Fragmentation → OTel GenAI standards)
-   - **R4:** Privacy-preserving capture (Compliance → masking/sampling/policies)
-
-7. **Comprehensive evaluation framework:**
-   - **Security:** Attack capture rate, MTTA, trajectory completeness
-   - **Cost:** $/task, tokens/solve, runaway-loop prevention, attribution accuracy
-   - **Reliability:** MTTR, tool-success ratio, causal graph completeness, quiet failure detection
-   - **Standards:** OTel conformance, MCP coverage, cross-vendor correlation
-
-8. **90-day deployment roadmap:**
-   - **P0 (Weeks 1-2):** Boundary tracing (Tetragon, TLS metadata)
-   - **P1 (Weeks 3-4):** OTel GenAI agent spans adoption
-   - **P2 (Weeks 5-8):** Cognitive observability agents (Watson-style)
-   - **P3 (Weeks 9-12):** Multi-agent causal graphs, MCP-aware capture
-
-9. **Privacy & compliance addressed:**
-   - Redaction/masking at probe time
-   - Sampling strategies (1-10% full, 90-99% metadata)
-   - Scoped retention & policy-driven filtering
-   - Consent & transparency flows
-   - OTel GenAI privacy attributes integration
-
-10. **Vision kept concise (3 slides):**
-    - 11.1: Two-Plane Architecture (overview)
-    - 11.2: Data Plane (evidence & practice)
-    - 11.3: Cognitive Plane (algorithms & outputs)
-
-### Timing:
-- **17 slides** (sections 1-8, survey foundation) ≈ **11-12 min** @ 40s/slide
-- **1 slide** (Gaps & Requirements) ≈ **45s**
-- **1 slide** (Standards & Ecosystem) ≈ **45-60s**
-- **3 slides** (Vision) ≈ **3 min**
-- **3 slides** (Evaluation, Deployment, Privacy) ≈ **2-3 min**
-- **Total:** 25 slides, **17-18 min**
-
-### Coverage of all requested points:
-
-✅ **现状** (State): Slides 2A-2C (IPI, cost, fragmentation) + Slide 3 (formal definition)
-✅ **大规模部署挑战** (Large-scale deployment challenges): Slides 2A-2C, 8A-8C (IPI, cost escalation, scaling effects)
-✅ **为什么需要可观测** (Why observability is needed): Slide 3 (MELT → MELT+Evals+Gov, trajectory vs trace)
-✅ **三种背景** (Three silos): Slides 4A-4B, 5A-5B, 6A-6B (APM/Serving, LLM-centric, Agent-level)
-✅ **现有方案不足** (Limitations of existing approaches): Slides 4B, 5B, 6B, 7C
-✅ **两个平面主张** (Two-plane architecture): Slides 11.1-11.3
-✅ **两个关键特征** (Two key features): Slide 9 (Instrumentation & Semantic gaps), R1-R4 requirements
-✅ **Standards & ecosystem (Why now)**: Slide 10 (OTel GenAI, MCP news, managed components)
-✅ **Evaluation & deployment**: Slides 12-13 (metrics, 90-day roadmap)
-✅ **Privacy & compliance**: Slide 14 (redaction, sampling, policies)
-
----
-
-## Visual Guide for Expanded Slides
-
-### Suggested figures/diagrams per slide:
-
-**2A (IPI/Safety):**
-- Table: Attack surfaces (web, email, repos, files) × Attack goals (exfiltration, unauthorized action, code exec)
-- Pipeline diagram: attacker content → tool → agent reasoning → harmful action
-
-**2B (Cost/ROI):**
-- Bar chart: tokens vs #agents/#rounds (cite S²-MAD or ICLR papers)
-- Small comparison: MAD vs CoT (win/tie/lose)
-
-**2C (Fragmentation):**
-- Swimlane diagram: SaaS model | app agent | ops system | MCP tool (ownership boundaries)
-
-**3A (APM/Serving gives):**
-- Tiny Grafana panels: throughput graph, latency histogram, GPU utilization gauge
-
-**3B (APM/Serving misses):**
-- Your **Table 1** from paper: Request trace (HTTP, inference, response) vs Decision trajectory (goal, reasoning, tool, action, outcome)
-
-**4A (LLM-centric tools):**
-- Spec-stack diagram: OTel GenAI semconv → OpenInference/OpenLLMetry → backends (Langfuse, Phoenix, Datadog, Honeycomb)
-
-**4B (LLM-centric limits):**
-- Coverage heatmap: Model I/O (strong, green), App logic (medium, yellow), System/Network/Tool (weak, red)
-
-**5A (Agent-level frameworks):**
-- Matrix: rows = tools (AgentOps, Maxim, PromptLayer, LangKit); cols = (integration, strengths, limits, OTel?)
-
-**5B (Agent-level missing):**
-- Venn diagram: Small circle "Single-agent coherence" inside larger circle "Production multi-agent, multi-layer, cost-aware"
-
-**6A (Industrial landscape):**
-- 3-tier table (shown in slide content) with checkmarks for OTel support
-
-**6B (Practices in talks):**
-- Reference architecture diagrams: OTel spans → backend; Prom metrics → Grafana (correlation by trace ID)
-
-**6C (SDK-only insufficient):**
-- "Where SDKs cannot go" diagram: IDE (closed), OS agent (closed), SaaS API (closed) | "Where boundaries are observable": TLS layer, syscall layer, API responses
-
-**7A (IPI threat model):**
-- Attack surface table + pipeline (same as 2A, but more detailed with InjecAgent benchmark metrics)
-
-**7B (Cost escalation):**
-- Token growth chart: #agents/rounds → tokens (exponential curve)
-- Callout: "~7.5× in certain regimes"
-
-**7C (Balanced view):**
-- Win/tie/lose bar chart (from "Stop Overvaluing MAD")
-- Cost vs. accuracy scatter plot (if available from papers)
-
----
-
-## Quick Reference: Slide Snippets for Copy-Paste
-
-### Standards & ecosystem (Why now)
-
-- **OTel GenAI**: agent/model spans unify telemetry; events/metrics complete MELT+Evals
-- **OpenInference/OpenLLMetry**: OTel-compatible tracers reduce SDK sprawl
-- **MCP**: tool/data "USB-C"—**Windows** support + Microsoft developer guidance; Google MCP servers emerging
-- **Managed components**: **Claude Code** CLI/IDE & Agent SDK → prefer **boundary capture** + **standard spans** over in-app SDKs
-
-### Data Plane (practice evidence)
-
-- **System**: **Tetragon** process lifecycle & file I/O, cluster metadata correlation
-- **Network/TLS**: **eCapture** at library boundaries (no app changes), compatible with closed-source/managed clients
-- **Model**: **OTel GenAI** spans/metrics/events → Langfuse/Phoenix/Datadog/Honeycomb
-
-### Cognitive Plane (algorithms & outputs)
-
-- Semantic detection & trajectory reconstruction (ref **Watson**)
-- Cross-layer causality graph
-- Cost policies
-- **Outputs**: security/compliance alerts, budget/rate-limit actions, auditable multi-agent causal chains
-
----
 
 ## Complete Speaker Scripts (15-minute delivery)
 
@@ -1433,30 +1156,3 @@ Core citations to include across slides:
 7. **Agent-level research:** Cognitive observability
    - [AgentOps arXiv](https://arxiv.org/abs/2411.05285)
    - [Watson arXiv](https://arxiv.org/abs/2411.03455)
-
----
-
-## Final Academic Structure Summary
-
-**This talk now provides:**
-
-1. **Formal foundations** (Definition, Gaps, Requirements)
-2. **Comprehensive survey** (APM/LLM/Agent silos + industrial landscape)
-3. **Academic grounding** (ACL, NAACL, ICLR peer-reviewed papers)
-4. **Current standards** (OTel GenAI agent spans, MCP ecosystem news)
-5. **Pragmatic framing** (managed/closed-source → boundary capture)
-6. **Evaluation framework** (Security, Cost, Reliability, Standards metrics)
-7. **Deployment roadmap** (90 days, P0-P3)
-8. **Privacy & compliance** (redaction, sampling, policies)
-9. **Vision** (Two-Plane Architecture with evidence)
-
-**Result:** A complete, academic, survey-first presentation that systematically motivates the need for agent observability, surveys existing approaches and their limitations, formalizes the problem and requirements, presents the two-plane solution with feasibility evidence, and provides concrete evaluation and deployment paths.
-
-**Key differentiators from generic observability talks:**
-- Formal definition (⟨G,Π,T,E⟩ tuple)
-- Two gaps formalization (Instrumentation, Semantic)
-- Requirements derivation (R1-R4 from heterogeneity, dynamism, scale)
-- Balanced view (includes negative results, scaling challenges)
-- Standards-first deployment (OTel GenAI + MCP)
-- Privacy-by-design (not an afterthought)
-- Comprehensive metrics (not just latency/throughput)
