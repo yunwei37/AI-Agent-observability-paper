@@ -75,9 +75,9 @@ The second challenge is isolating signal from noise. Agents spawn arbitrary tool
 
 The architecture has two data streams.
 
-The intent stream uses eBPF uprobes on SSL_read and SSL_write to capture prompts and responses.
+The intent stream captures LLM prompts and responses at the network boundary.
 
-The action stream uses eBPF kprobes and tracepoints to capture process and I/O events.
+The action stream captures process creation and I/O events at the kernel boundary.
 
 A userspace daemon performs correlation with an observer LLM that interprets the trace and checks consistency with goals.
 
@@ -87,7 +87,7 @@ A userspace daemon performs correlation with an observer LLM that interprets the
 
 Here's the full pipeline, from raw signals to causal understanding to semantic analysis.
 
-First, we capture the two streams. We capture intent via TLS by intercepting SSL functions. We capture effects via the kernel by monitoring exec, fork, openat2, connect, and execve. Crucially, we apply aggressive in-kernel filters right at the source. By building the process lineage tree in eBPF, we only send events from the agent and its descendants to userspace. This dramatically reduces overhead while keeping the full causal chain intact.
+First, we capture the two streams. We capture intent via TLS interception and effects via kernel monitoring. Crucially, we apply aggressive in-kernel filters right at the source. By building the process lineage tree in eBPF, we only send events from the agent and its descendants to userspace. This dramatically reduces overhead while keeping the full causal chain intact.
 
 Second, we correlate using three complementary signals. Signal one is process lineage. We track every fork and exec to build a complete tree. This lets us attribute child actions back to the agent that spawned them, even across multiple levels of subprocesses. Signal two is temporal proximity. We use a short time window, typically 100 to 500 milliseconds, to link actions that occur immediately after an LLM response. Signal three is argument matching. We directly match content from LLM responses—filenames, URLs, command strings—with the arguments of subsequent system calls. Together, these three signals give us high-confidence causal links.
 
@@ -117,7 +117,7 @@ Now let me show you three use cases that demonstrate effectiveness. First is pro
 
 Second use case is reasoning loop detection. We had a research agent that repeatedly called a web search tool with the wrong arguments. It got an error, but then failed to correct its mistake. It just kept retrying the exact same failing command in a try-fail-re-reason loop. AgentSight flagged this anomalous resource consumption. The observer LLM identified the root cause and prevented further waste.
 
-Third is multi-agent coordination. We monitored six collaborating software development agents and captured 3,153 events after correlation. The analysis revealed file-lock contention and sequential dependencies that were blocking the frontend and test agents. This showed that clarifying roles more explicitly could reduce both runtime and token cost. This demonstrates how boundary tracing captures multi-agent dynamics that application-level monitoring simply cannot see across process boundaries.
+Third is multi-agent coordination. We monitored six collaborating software development agents. The analysis revealed file-lock contention and sequential dependencies that were blocking the frontend and test agents. This showed that clarifying roles more explicitly could reduce both runtime and token cost. This demonstrates how boundary tracing captures multi-agent dynamics that application-level monitoring simply cannot see across process boundaries.
 
 Bottom line: the approach delivers actionable insights for security, performance, and coordination, all with no application changes required.
 
