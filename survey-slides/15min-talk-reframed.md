@@ -4,20 +4,25 @@ Academic Survey-First Structure (15 min)
 
 ---
 
-## Flow (15 slides total, ≈15 min — streamlined with merged industrial survey)
+## Flow (15 slides total, ≈15 min — reordered for narrative clarity)
 
+**Part 1: The Problem & Its Timeliness (Slides 1-5)**
 1. Title & Contributions (1 slide)
 2. State & Motivation: Safety under uncertainty / IPI (1 slide)
 3. State & Motivation: Cost & ROI / Token escalation (1 slide)
 4. State & Motivation: Fragmentation & integration surface / MCP + managed components (1 slide)
-5. Formal Definition: Agent Observability (1 slide)
+5. Standards & ecosystem (Why now) (1 slide) ← **This is why the timing is right**
+
+**Part 2: The Landscape & The Gaps (Slides 6-12)**
 6. Background I: APM/Serving (what it gives & what it misses) (1 slide)
 7. Background II: Model-centric tools (capabilities & limits) (1 slide)
 8. Background III: Agent-level frameworks (what they do & gaps) (1 slide)
 9. Industrial Landscape: Three Tiers + Adoption + SDK Limitations (1 slide)
 10. Academic signals: Safety (IPI), Cost escalation & Balanced view (1 slide)
 11. Formal: Two Gaps & Requirements (1 slide)
-12. Standards & ecosystem (Why now) (1 slide)
+12. Formal Definition: Agent Observability (1 slide) ← **Formalization after gaps identified**
+
+**Part 3: The Solution & Vision (Slides 13-15)**
 13. Vision: Two-Plane Architecture (overview) (1 slide)
 14. Vision: Data Plane (evidence & practice) (1 slide)
 15. Vision: Cognitive Plane (algorithms & outputs) (1 slide)
@@ -256,85 +261,42 @@ Speaker Script (0:50):
 
 ---
 
-### 5) Formal Definition: Agent Observability (0:45)
+### 5) Standards & Ecosystem (Why Now) (0:45)
 
-Formal System Model
+OpenTelemetry GenAI: Stable conventions & ecosystem momentum
+- Stable semantic conventions: model spans, agent spans, events, metrics
+- OTel Blog (Mar 6, 2025): "AI Agent Observability - Evolving Standards and Best Practices"
+- Tracks agent observability standardization across industry
+- Shared schema to exchange agent telemetry across vendors/backends
+- *Source: [OTel GenAI Agent Spans](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-agent-spans/), [OTel Blog 2025](https://opentelemetry.io/blog/2025/ai-agent-observability/)*
 
-An agentic system is a tuple ⟨G, Π, T, E⟩ where:
-- G: Goals (user intent, objectives)
-- Π: Plans/Trajectories (reasoning steps, decision sequences)
-- T: Tools (external capabilities the agent can invoke)
-- E: Environment Events (system actions, API calls, observations)
+OpenInference & OpenLLMetry: Reduce SDK sprawl
+- OTel-compatible tracers/conventions for LLM frameworks
+- Bridge Python/JS/Java ecosystems and backends (Langfuse, Phoenix, Datadog)
+- Good dev ergonomics, but app-side only (not sufficient for production trust alone)
+- *Source: [Arize OpenInference](https://arize.com/docs/ax/observe/tracing/tracing-concepts/what-is-openinference), [OpenInference GitHub](https://github.com/Arize-ai/openinference)*
 
----
+MCP (Model Context Protocol): "USB-C for AI tools" — Rising platform support
+- Standardizes agent ↔ tool/data connections (Anthropic spec)
+- Microsoft Build 2025: Windows first-party MCP support announced
+- Reuters (May 19, 2025): "Microsoft wants AI agents to work together, remember things"
+- The Verge: Windows AI Foundry MCP support; Anthropic MCP data sources coverage
+- Google & partners release MCP servers (Data Commons, etc.)
+- Implication: More integrations → higher observability & policy demand across tools/agents
+- *Sources:*
+  - [MCP Specification](https://modelcontextprotocol.io/specification/latest)
+  - [Microsoft Build 2025 Blog](https://blogs.microsoft.com/blog/2025/05/19/microsoft-build-2025-the-age-of-ai-agents-and-building-the-open-agentic-web/)
+  - [Reuters: Microsoft AI agents](https://www.reuters.com/business/microsoft-wants-ai-agents-work-together-remember-things-2025-05-19/)
+  - [The Verge: Windows MCP](https://www.theverge.com/news/669298/microsoft-windows-ai-foundry-mcp-support)
+  - [The Verge: Anthropic MCP](https://www.theverge.com/2024/11/25/24305774/anthropic-model-context-protocol-data-sources)
 
-Definition: Agent Observability
-
-Agent observability is the capability to:
-
-(a) Capture:
-- A minimal, sufficient statistic S(E) of environment events
-- At stable system boundaries: model API / network (TLS) / syscalls / human feedback
-- With properties: tamper-resistant, low overhead, privacy-preserving
-
-(b) Infer:
-- From the tuple ⟨S(E), G, Π, T⟩
-- Whether the agent's reasoning and actions satisfy:
-  - Correctness: Goal alignment, tool justification
-  - Safety: Policy compliance, attack resistance
-  - Cost: Budget constraints, efficiency
-- With auditability: Traceable decision chains for compliance
-
----
-
-Paradigm Shift from Traditional Observability
-
-| Dimension | Traditional (Systems) | Agentic (Behavioral) |
-|-----------|----------------------|---------------------|
-| Primary Goal | System health & availability | Behavioral correctness, safety, trust |
-| Pillars | MELT (Metrics, Events, Logs, Traces) | MELT + Evaluations + Governance |
-| Unit of Analysis | Request trace (HTTP → service → DB) | Decision trajectory (goal → reasoning → tool → action → outcome) |
-| Failure Modes | Exceptions (5xx, timeouts, crashes) | Quiet failures (logic errors, tool misuse, hallucinations, IPI) |
-| Correlation | Distributed tracing (span hierarchy) | Causal reasoning (intent → action → system effect → cost) |
-| Response | Alert → page ops team | Policy enforcement (quarantine, budget cap, tool deny-list) |
-
----
-
-Formal Problem Decomposition (Three Pain Points)
-
-1. Safety
-   - Challenge: Uncertainty + complexity → semantic failures + adversarial threats
-   - Examples: IPI, tool misuse, credential leakage
-   - Requirement: Audit-quality trajectory traces with boundary-aligned capture
-
-2. Cost
-   - Challenge: Multi-layer, non-linear cost growth
-   - Examples: Multi-agent token escalation (7.5×), infrastructure overhead (70% of API)
-   - Requirement: $/task & tokens/solve SLIs, budget policies, cost attribution
-
-3. Fragmentation
-   - Challenge: Multi-vendor, multi-layer stacks with mixed ownership
-   - Examples: SaaS models, managed agents (Claude Code), MCP tools
-   - Requirement: Standard telemetry (OTel GenAI), boundary capture, cross-vendor correlation
-
----
-
-Visual:
-
-| Dimension | Traditional | → | Agentic |
-|--------------|----------------|-------|-------------|
-| Goal | System health | → | Behavioral correctness |
-| Pillars | MELT | → | MELT + Evals + Gov |
-| Unit | Request trace | → | Decision trajectory |
-| Failures | Exceptions | → | Quiet failures |
-
-*Sources:*
-- Your paper (two-plane vision, gaps, requirements)
-- [InjecAgent ACL 2024](https://aclanthology.org/2024.findings-acl.624/) (IPI threat model)
-- [S²-MAD NAACL 2025](https://aclanthology.org/2025.naacl-long.475.pdf) (cost escalation)
+Managed / closed-source components:
+- Parts of the stack (e.g., Claude Code CLI/IDE, Copilot, Cursor) are not open to in-process SDK injection
+- Boundary-based capture + standard spans (OTel GenAI) become pragmatic path
+- *Source: [Claude Code Autonomous Work](https://anthropic.com/news/enabling-claude-code-to-work-more-autonomously)*
 
 Speaker Script (0:45):
-"Let me formalize what we mean by Agent Observability. An agentic system is a tuple of Goals, Plans, Tools, and Environment events. Agent observability is the capability to first, capture a minimal, tamper-resistant statistic at stable boundaries—model endpoints, network, syscalls, human feedback—and second, infer from these signals whether the agent's reasoning and actions satisfy correctness, safety, and cost constraints, with auditability. This shifts us from system health to behavioral correctness, from MELT to MELT plus Evaluations plus Governance, and from request traces to decision trajectories. The formal problem has three dimensions: safety under uncertainty, cost escalation, and fragmentation across vendors."
+"This is why the timing is right to solve these problems now. OpenTelemetry GenAI gives us agent and model spans with events and metrics as stable semantic conventions. The OTel blog on March 6, 2025 published 'AI Agent Observability: Evolving Standards and Best Practices,' tracking agent observability standardization across industry. OpenInference and OpenLLMetry provide OTel-compatible tracers and conventions, bridging Python, JavaScript, Java ecosystems to backends like Langfuse, Phoenix, and Datadog. Model Context Protocol—the 'USB-C for AI tools'—is landing in production. Microsoft Build 2025 announced Windows first-party MCP support. Reuters on May 19, 2025, reported 'Microsoft wants AI agents to work together, remember things.' The Verge covered Windows AI Foundry MCP support and Anthropic's MCP data sources. Google released the Data Commons MCP server. This ecosystem expansion raises the bar for observability and policy—more integrations mean higher demand for cross-tool correlation and governance. Parts of the stack like Claude Code CLI and IDE integrations, Copilot, and Cursor are not open to in-process SDK injection. Boundary-based capture plus standard spans via OTel GenAI become the pragmatic path."
 
 ---
 
@@ -854,42 +816,85 @@ Speaker Script (0:45):
 
 ---
 
-### 12) Standards & Ecosystem (Why Now) (0:45)
+### 12) Formal Definition: Agent Observability (0:45)
 
-OpenTelemetry GenAI: Stable conventions & ecosystem momentum
-- Stable semantic conventions: model spans, agent spans, events, metrics
-- OTel Blog (Mar 6, 2025): "AI Agent Observability - Evolving Standards and Best Practices"
-- Tracks agent observability standardization across industry
-- Shared schema to exchange agent telemetry across vendors/backends
-- *Source: [OTel GenAI Agent Spans](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-agent-spans/), [OTel Blog 2025](https://opentelemetry.io/blog/2025/ai-agent-observability/)*
+Formal System Model
 
-OpenInference & OpenLLMetry: Reduce SDK sprawl
-- OTel-compatible tracers/conventions for LLM frameworks
-- Bridge Python/JS/Java ecosystems and backends (Langfuse, Phoenix, Datadog)
-- Good dev ergonomics, but app-side only (not sufficient for production trust alone)
-- *Source: [Arize OpenInference](https://arize.com/docs/ax/observe/tracing/tracing-concepts/what-is-openinference), [OpenInference GitHub](https://github.com/Arize-ai/openinference)*
+An agentic system is a tuple ⟨G, Π, T, E⟩ where:
+- G: Goals (user intent, objectives)
+- Π: Plans/Trajectories (reasoning steps, decision sequences)
+- T: Tools (external capabilities the agent can invoke)
+- E: Environment Events (system actions, API calls, observations)
 
-MCP (Model Context Protocol): "USB-C for AI tools" — Rising platform support
-- Standardizes agent ↔ tool/data connections (Anthropic spec)
-- Microsoft Build 2025: Windows first-party MCP support announced
-- Reuters (May 19, 2025): "Microsoft wants AI agents to work together, remember things"
-- The Verge: Windows AI Foundry MCP support; Anthropic MCP data sources coverage
-- Google & partners release MCP servers (Data Commons, etc.)
-- Implication: More integrations → higher observability & policy demand across tools/agents
-- *Sources:*
-  - [MCP Specification](https://modelcontextprotocol.io/specification/latest)
-  - [Microsoft Build 2025 Blog](https://blogs.microsoft.com/blog/2025/05/19/microsoft-build-2025-the-age-of-ai-agents-and-building-the-open-agentic-web/)
-  - [Reuters: Microsoft AI agents](https://www.reuters.com/business/microsoft-wants-ai-agents-work-together-remember-things-2025-05-19/)
-  - [The Verge: Windows MCP](https://www.theverge.com/news/669298/microsoft-windows-ai-foundry-mcp-support)
-  - [The Verge: Anthropic MCP](https://www.theverge.com/2024/11/25/24305774/anthropic-model-context-protocol-data-sources)
+---
 
-Managed / closed-source components:
-- Parts of the stack (e.g., Claude Code CLI/IDE, Copilot, Cursor) are not open to in-process SDK injection
-- Boundary-based capture + standard spans (OTel GenAI) become pragmatic path
-- *Source: [Claude Code Autonomous Work](https://anthropic.com/news/enabling-claude-code-to-work-more-autonomously)*
+Definition: Agent Observability
+
+Agent observability is the capability to:
+
+(a) Capture:
+- A minimal, sufficient statistic S(E) of environment events
+- At stable system boundaries: model API / network (TLS) / syscalls / human feedback
+- With properties: tamper-resistant, low overhead, privacy-preserving
+
+(b) Infer:
+- From the tuple ⟨S(E), G, Π, T⟩
+- Whether the agent's reasoning and actions satisfy:
+  - Correctness: Goal alignment, tool justification
+  - Safety: Policy compliance, attack resistance
+  - Cost: Budget constraints, efficiency
+- With auditability: Traceable decision chains for compliance
+
+---
+
+Paradigm Shift from Traditional Observability
+
+| Dimension | Traditional (Systems) | Agentic (Behavioral) |
+|-----------|----------------------|---------------------|
+| Primary Goal | System health & availability | Behavioral correctness, safety, trust |
+| Pillars | MELT (Metrics, Events, Logs, Traces) | MELT + Evaluations + Governance |
+| Unit of Analysis | Request trace (HTTP → service → DB) | Decision trajectory (goal → reasoning → tool → action → outcome) |
+| Failure Modes | Exceptions (5xx, timeouts, crashes) | Quiet failures (logic errors, tool misuse, hallucinations, IPI) |
+| Correlation | Distributed tracing (span hierarchy) | Causal reasoning (intent → action → system effect → cost) |
+| Response | Alert → page ops team | Policy enforcement (quarantine, budget cap, tool deny-list) |
+
+---
+
+Formal Problem Decomposition (Three Pain Points)
+
+1. Safety
+   - Challenge: Uncertainty + complexity → semantic failures + adversarial threats
+   - Examples: IPI, tool misuse, credential leakage
+   - Requirement: Audit-quality trajectory traces with boundary-aligned capture
+
+2. Cost
+   - Challenge: Multi-layer, non-linear cost growth
+   - Examples: Multi-agent token escalation (7.5×), infrastructure overhead (70% of API)
+   - Requirement: $/task & tokens/solve SLIs, budget policies, cost attribution
+
+3. Fragmentation
+   - Challenge: Multi-vendor, multi-layer stacks with mixed ownership
+   - Examples: SaaS models, managed agents (Claude Code), MCP tools
+   - Requirement: Standard telemetry (OTel GenAI), boundary capture, cross-vendor correlation
+
+---
+
+Visual:
+
+| Dimension | Traditional | → | Agentic |
+|--------------|----------------|-------|-------------|
+| Goal | System health | → | Behavioral correctness |
+| Pillars | MELT | → | MELT + Evals + Gov |
+| Unit | Request trace | → | Decision trajectory |
+| Failures | Exceptions | → | Quiet failures |
+
+*Sources:*
+- Your paper (two-plane vision, gaps, requirements)
+- [InjecAgent ACL 2024](https://aclanthology.org/2024.findings-acl.624/) (IPI threat model)
+- [S²-MAD NAACL 2025](https://aclanthology.org/2025.naacl-long.475.pdf) (cost escalation)
 
 Speaker Script (0:45):
-"Why now? OpenTelemetry GenAI gives us agent and model spans with events and metrics as stable semantic conventions. The OTel blog on March 6, 2025 published 'AI Agent Observability: Evolving Standards and Best Practices,' tracking agent observability standardization across industry. OpenInference and OpenLLMetry provide OTel-compatible tracers and conventions, bridging Python, JavaScript, Java ecosystems to backends like Langfuse, Phoenix, and Datadog. Model Context Protocol—the 'USB-C for AI tools'—is landing in production. Microsoft Build 2025 announced Windows first-party MCP support. Reuters on May 19, 2025, reported 'Microsoft wants AI agents to work together, remember things.' The Verge covered Windows AI Foundry MCP support and Anthropic's MCP data sources. Google released the Data Commons MCP server. This ecosystem expansion raises the bar for observability and policy—more integrations mean higher demand for cross-tool correlation and governance. Parts of the stack like Claude Code CLI and IDE integrations, Copilot, and Cursor are not open to in-process SDK injection. Boundary-based capture plus standard spans via OTel GenAI become the pragmatic path."
+"Having identified the gaps across the landscape, let me now formalize what Agent Observability means. An agentic system is a tuple of Goals, Plans, Tools, and Environment events. Agent observability is the capability to first, capture a minimal, tamper-resistant statistic at stable boundaries—model endpoints, network, syscalls, human feedback—and second, infer from these signals whether the agent's reasoning and actions satisfy correctness, safety, and cost constraints, with auditability. This shifts us from system health to behavioral correctness, from MELT to MELT plus Evaluations plus Governance, and from request traces to decision trajectories. The formal problem has three dimensions: safety under uncertainty, cost escalation, and fragmentation across vendors."
 
 ---
 
@@ -983,91 +988,3 @@ Privacy & Compliance Integration:
 Speaker Script (1:00):
 "The Cognitive Plane runs algorithms for semantic evaluation: detecting hallucinations, infinite loops, tool misuse. Decision trajectory reconstruction, inspired by the Watson framework, uses surrogate observers to reconstruct reasoning without modifying the target agent runtime. It builds multi-layer causal graphs linking agent decisions to model token costs to system actions to outcomes. Cost policies enforce dollar-per-task limits and tokens-per-solve thresholds. Outputs include: first, security alerts and isolation—policy enforcement, quarantine, tool deny-lists; second, cost budgets and rate limiting—fallback policies, stop conditions, routing to cheaper agents; third, auditable multi-agent causal chains—structured summaries for regulatory review and incident post-mortems."
 
----
-
-## Industry Practice Evidence (Expanded Survey Details)
-
-### A. Industrial "Observability + Agents" Practices (2024-2025)
-
-Serving Layer:
-- vLLM/Triton expose Prometheus metrics
-- IBM/Google/community provide vLLM production monitoring practices & Grafana templates
-- Use case: SLO, not semantic correctness
-- *Source: [vLLM Metrics](https://docs.vllm.ai/en/latest/design/metrics.html)*
-
-LLM-centric:
-- LangSmith: 1 env var enables tracing
-- Langfuse: Acts as OTel backend, accepts OTLP
-- Phoenix: OpenInference decorators (TS & Python)
-- OpenLLMetry: OTel extensions
-- Honeycomb/Datadog: LLM Observability (costs, chains, evals)
-- ✅ Advantage: Fast deployment
-- ❌ Limitation: Depends on app-side integration
-- *Source: [LangSmith Quickstart](https://docs.langchain.com/langsmith/observability-quickstart)*
-
-Agent-level:
-- Maxim: Multi-agent trajectory & evals integrated
-- PromptLayer: OTel-compatible traces & prompt versioning
-- WhyLabs LangKit: Text/PII/toxicity metrics
-- ✅ Advantage: Focuses on "agent behavior"
-- ❌ Limitation: Still depends on framework hooks
-- *Source: [Maxim AI](https://www.getmaxim.ai/articles/agent-tracing-for-debugging-multi-agent-ai-systems/)*
-
-Industry talks/slides (citable):
-- Cloud Native Summit: GenAI Framework Observability (includes MCP updates)
-- OTel at KubeCon: Agent topics
-- Arize Observe 2025
-- LangChain Interrupt 2025: Agent reliability & observability
-- *Source: [Speaker Deck](https://speakerdeck.com/adriancole/genai-framework-observability-at-cloud-native-s)*
-
----
-
-### B. Ecosystem & Vendor Trends (Why Now)
-
-OTel GenAI:
-- Covers agent spans / model spans / events / metrics
-- Still advancing collector integration
-- *Source: [OTel GenAI](https://opentelemetry.io/docs/specs/semconv/gen-ai/)*
-
-MCP:
-- OS/IDE-level capability
-- Windows adoption (Build 2025)
-- MS developer blog: "Connect once, integrate anywhere"
-- Google Data Commons MCP server
-- Expands agent tool surface → increases cross-tool observability demand
-- *Source: [Windows Blog](https://blogs.windows.com/windowsexperience/2025/05/19/securing-the-model-context-protocol-building-a-safer-agentic-future-on-windows/)*
-
-Closed-source/managed components:
-- Claude Code: Terminal/VS Code/JetBrains agentic dev experience
-- Official Agent SDK also in managed form
-- Difficult to inject third-party SDK
-- Conclusion: Boundary capture + standardized spans are pragmatic
-- *Source: [Claude Code](https://www.anthropic.com/engineering/claude-code-best-practices)*
-
----
-
-## References for Slide Footers (Short, Load-Bearing)
-
-Core citations to include across slides:
-
-1. Your paper: Two-Plane vision, gaps formalization, requirements
-2. OTel GenAI: Agent spans & attributes
-   - [Spec](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-agent-spans/)
-   - [Blog Mar 2025](https://opentelemetry.io/blog/2025/ai-agent-observability/)
-3. MCP: Spec + adoption news
-   - [Specification](https://modelcontextprotocol.io/specification/latest)
-   - [Microsoft Build 2025](https://blogs.microsoft.com/blog/2025/05/19/microsoft-build-2025-the-age-of-ai-agents-and-building-the-open-agentic-web/)
-   - [Reuters](https://www.reuters.com/business/microsoft-wants-ai-agents-work-together-remember-things-2025-05-19/)
-   - [The Verge - Windows](https://www.theverge.com/news/669298/microsoft-windows-ai-foundry-mcp-support)
-   - [The Verge - Anthropic](https://www.theverge.com/2024/11/25/24305774/anthropic-model-context-protocol-data-sources)
-4. Security: IPI benchmark
-   - [InjecAgent ACL 2024](https://aclanthology.org/2024.findings-acl.624/)
-5. Cost: Token escalation in multi-agent systems
-   - [S²-MAD NAACL 2025](https://aclanthology.org/2025.naacl-long.475.pdf)
-   - [Stop Overvaluing MAD arXiv](https://arxiv.org/pdf/2502.08788)
-6. Boundary capture: System-level observability
-   - [Tetragon](https://tetragon.io/)
-   - [eCapture](https://github.com/gojue/ecapture)
-7. Agent-level research: Cognitive observability
-   - [AgentOps arXiv](https://arxiv.org/abs/2411.05285)
-   - [Watson arXiv](https://arxiv.org/abs/2411.03455)
