@@ -4,30 +4,27 @@ Academic Survey-First Structure (15 min)
 
 ---
 
-## Flow (25 slides total, ≈17-18 min — expanded with formal definitions, requirements, evaluation)
+## Flow (19 slides total, ≈17-18 min — expanded with formal definitions, requirements, evaluation)
 
 1. Title & Contributions (1 slide)
 2. State & Motivation: Safety under uncertainty / IPI (1 slide)
 3. State & Motivation: Cost & ROI / Token escalation (1 slide)
 4. State & Motivation: Fragmentation & integration surface / MCP + managed components (1 slide)
 5. Formal Definition: Agent Observability (1 slide)
-6. Background I: What Serving/APM already gives (1 slide)
-7. Background I: What Serving/APM misses for agents (1 slide)
-8. Background II: Model-centric tools & specs (1 slide)
-9. Background II: Limits of model-centric approaches (1 slide)
-10. Background III: Agent-level frameworks (what they do) (1 slide)
-11. Background III: What's still missing (1 slide)
-12. Extended Survey: Industrial landscape (APM/Serving → LLM → Agent) (1 slide)
-13. Extended Survey: Practices shown in talks/slides (1 slide)
-14. Extended Survey: Why SDK-only is insufficient operationally (1 slide)
-15. Academic signals: Threat model (IPI) (1 slide)
-16. Academic signals: Cost escalation evidence (multi-agent) (1 slide)
-17. Academic signals: Balanced view (negative results & scaling effects) (1 slide)
-18. Formal: Two Gaps & Requirements (1 slide)
-19. Standards & ecosystem (Why now) (1 slide)
-20. Vision: Two-Plane Architecture (overview) (1 slide)
-21. Vision: Data Plane (evidence & practice) (1 slide)
-22. Vision: Cognitive Plane (algorithms & outputs) (1 slide)
+6. Background I: APM/Serving (what it gives & what it misses) (1 slide)
+7. Background II: Model-centric tools (capabilities & limits) (1 slide)
+8. Background III: Agent-level frameworks (what they do & gaps) (1 slide)
+9. Extended Survey: Industrial landscape (APM/Serving → LLM → Agent) (1 slide)
+10. Extended Survey: Practices shown in talks/slides (1 slide)
+11. Extended Survey: Why SDK-only is insufficient operationally (1 slide)
+12. Academic signals: Threat model (IPI) (1 slide)
+13. Academic signals: Cost escalation evidence (multi-agent) (1 slide)
+14. Academic signals: Balanced view (negative results & scaling effects) (1 slide)
+15. Formal: Two Gaps & Requirements (1 slide)
+16. Standards & ecosystem (Why now) (1 slide)
+17. Vision: Two-Plane Architecture (overview) (1 slide)
+18. Vision: Data Plane (evidence & practice) (1 slide)
+19. Vision: Cognitive Plane (algorithms & outputs) (1 slide)
 
 
 ## Slides
@@ -345,7 +342,9 @@ Speaker Script (0:45):
 
 ---
 
-### 6) Background I: What Serving/APM Already Gives You (0:45)
+### 6) Background I: APM/Serving (What It Gives & What It Misses) (0:50)
+
+**What Serving/APM Already Gives You:**
 
 Infrastructure SLOs: throughput, latency, GPU/memory, error rates
 
@@ -366,14 +365,9 @@ Cloud production recipes:
 - IBM/CoreWeave: Production monitoring practices & dashboards
 - *Source: [Google Cloud vLLM](https://cloud.google.com/stackdriver/docs/managed-prometheus/exporters/vllm), [IBM Medium](https://medium.com/ibm-data-ai/building-production-ready-observability-for-vllm-a2f4924d3949)*
 
-Visual: Tiny PromQL/Grafana panels showing throughput, latency, GPU utilization
-
-Speaker Script (0:45):
-"APM and Serving tools excel at infrastructure SLOs. vLLM exposes Prometheus metrics with community Grafana dashboards tracking tokens per second, queue depth, time to first token. NVIDIA Triton provides a metrics endpoint with GPU and request statistics, plus Performance Analyzer tools for profiling. Cloud providers like GCP and IBM have published production monitoring practices. These are necessary foundations for LLM serving health."
-
 ---
 
-### 7) Background I: What Serving/APM Misses for Agents (0:45)
+**What Serving/APM Misses for Agents:**
 
 These SLOs do NOT answer:
 
@@ -389,14 +383,16 @@ Your paper's Table 1 distinction:
 - Request trace (APM): HTTP span → inference call → response (infrastructure view)
 - Decision trajectory (Agent): goal → reasoning → tool selection → action → outcome (behavioral view)
 
-Visual: Your Table 1 redrawn: side-by-side comparison of "request trace" vs "decision trajectory" attributes
+Visual: Split slide — Left: PromQL/Grafana panels (throughput, latency, GPU); Right: Table 1 comparison (request trace vs decision trajectory)
 
-Speaker Script (0:45):
-"But these SLOs do NOT answer: Did the agent reason correctly? Why was this tool chosen over alternatives? Did the agent achieve the user's objective? Which agent decision caused which system or model cost? Did the agent respect safety boundaries and budget constraints? Serving does not equal behavioral assurance. Our framework distinguishes request traces—HTTP span to inference call to response—from decision trajectories—goal to reasoning to tool selection to action to outcome. That's the behavioral view agents require."
+Speaker Script (0:50):
+"APM and Serving tools excel at infrastructure SLOs. vLLM exposes Prometheus metrics with community Grafana dashboards tracking tokens per second, queue depth, time to first token. NVIDIA Triton provides a metrics endpoint with GPU and request statistics, plus Performance Analyzer tools for profiling. Cloud providers like GCP and IBM have published production monitoring practices. These are necessary foundations for LLM serving health. But these SLOs do NOT answer: Did the agent reason correctly? Why was this tool chosen over alternatives? Did the agent achieve the user's objective? Which agent decision caused which system or model cost? Did the agent respect safety boundaries and budget constraints? Serving does not equal behavioral assurance. Our framework distinguishes request traces—HTTP span to inference call to response—from decision trajectories—goal to reasoning to tool selection to action to outcome. That's the behavioral view agents require."
 
 ---
 
-### 8) Background II: Model-Centric Tools & Specs (0:45)
+### 7) Background II: Model-Centric Tools (Capabilities & Limits) (0:50)
+
+**Capabilities & Ecosystem:**
 
 OpenTelemetry GenAI: The key schema for portability
 
@@ -420,16 +416,9 @@ Commercial backends with LLM Observability:
 - LangSmith: Traces/evals (1 env var to enable)
 - Honeycomb & Datadog: LLM Observability features (chain tracing, cost tracking)
 
-Visual: "Spec-stack" diagram: GenAI semconv → OpenInference/OpenLLMetry → backends (Langfuse, Phoenix, Datadog, Honeycomb)
-
-Speaker Script (0:45):
-"The model-centric ecosystem is maturing rapidly. OpenTelemetry GenAI now defines agent spans and model spans plus events and metrics as stable semantic conventions. OpenInference and OpenLLMetry provide OTel-compatible tracing conventions for LLM frameworks, bridging Python, JavaScript, and Java ecosystems. Langfuse can act as an OTLP backend, accepting traces directly. Commercial platforms like LangSmith, Honeycomb, and Datadog have launched LLM Observability features with chain tracing and cost tracking."
-
 ---
 
-### 9) Background II: Limits of Model-Centric Approaches (0:45)
-
-Often stop at model boundary
+**Limits: Often stop at model boundary**
 
 Coverage gaps:
 - Strong on model I/O (prompts, completions, tokens, latency)
@@ -450,14 +439,16 @@ Example from docs:
 - LangSmith shows traces, evals, costs — but not system/IPC/TLS capture
 - *Source: [LangSmith Observability](https://docs.langchain.com/langsmith/observability)*
 
-Visual: "Coverage heatmap" — strong (model I/O), medium (app logic), weak (system/network/tool execution)
+Visual: Split slide — Left: "Spec-stack" diagram (GenAI semconv → OpenInference/OpenLLMetry → backends); Right: "Coverage heatmap" (strong: model I/O, medium: app logic, weak: system/network/tool execution)
 
-Speaker Script (0:45):
-"These tools are excellent for prompts and evaluations, but often stop at the model boundary and require application-side SDKs or proxies. Coverage gaps emerge: strong on model I/O—prompts, completions, tokens, latency—but weak on system layer events like process spawning, file access, subprocess activity. Weak on network layer beyond HTTP—TLS plaintext, cross-service calls. Weak on tool execution layer—what actually happened on the OS or filesystem. Cross-layer correlation between agent decision, model call, system action, and cost is partial. Multi-agent coordination is often not modeled—you get spans per agent, but orchestration patterns remain unclear."
+Speaker Script (0:50):
+"The model-centric ecosystem is maturing rapidly. OpenTelemetry GenAI now defines agent spans and model spans plus events and metrics as stable semantic conventions. OpenInference and OpenLLMetry provide OTel-compatible tracing conventions for LLM frameworks, bridging Python, JavaScript, and Java ecosystems. Langfuse can act as an OTLP backend, accepting traces directly. Commercial platforms like LangSmith, Honeycomb, and Datadog have launched LLM Observability features with chain tracing and cost tracking. However, these tools are excellent for prompts and evaluations but often stop at the model boundary and require application-side SDKs or proxies. Coverage gaps emerge: strong on model I/O—prompts, completions, tokens, latency—but weak on system layer events like process spawning, file access, subprocess activity. Weak on network layer beyond HTTP—TLS plaintext, cross-service calls. Weak on tool execution layer—what actually happened on the OS or filesystem. Cross-layer correlation between agent decision, model call, system action, and cost is partial. Multi-agent coordination is often not modeled—you get spans per agent, but orchestration patterns remain unclear."
 
 ---
 
-### 10) Background III: Agent-Level Frameworks (What They Do) (0:45)
+### 8) Background III: Agent-Level Frameworks (What They Do & Gaps) (0:50)
+
+**What They Do:**
 
 AgentOps: Taxonomy & lifecycle tracing
 - Defines artifacts: goals, plans, tools, sessions, observations, actions
@@ -482,14 +473,9 @@ WhyLabs LangKit:
 - Drift detection for LLM outputs
 - *Source: [PostHog LLM Observability Tools](https://posthog.com/blog/best-open-source-llm-observability-tools)*
 
-Visual: Matrix: rows = tools; cols = (integration path, strengths, limits, OTel compat?)
-
-Speaker Script (0:45):
-"Agent-level frameworks define what to capture. AgentOps proposes a lifecycle and artifact taxonomy: goals, plans, tools, sessions, observations, actions—focused on agent lifecycle tracing with session replay. Maxim AI offers agent trajectory visualization and distributed tracing with evaluation frameworks integrated. PromptLayer provides OTel-compatible traces with prompt versioning and A/B testing, tracking cost per prompt variant. WhyLabs LangKit adds text quality metrics—PII detection, toxicity, sentiment—with drift detection for LLM outputs."
-
 ---
 
-### 11) Background III: What's Still Missing (0:45)
+**What's Still Missing:**
 
 Single-agent focus dominates
 
@@ -517,14 +503,14 @@ Your paper addresses this gap:
 - Formalizes instrumentation gap (system capture) + semantic gap (intent ↔ action)
 - Proposes system-level, multi-agent, cost-aware observability via Two-Plane Architecture
 
-Visual: "Single-agent focus" circle vs "Production multi-agent, multi-layer" larger circle showing gap
+Visual: Split slide — Left: Matrix (rows = tools; cols = integration path, strengths, limits, OTel compat?); Right: "Single-agent focus" circle vs "Production multi-agent, multi-layer" larger circle showing gap
 
-Speaker Script (0:45):
-"But there's a research gap. Many works focus on single agent's internal coherence: Did this agent reason correctly given its prompt and tools? Can we reconstruct the agent's reasoning trace? Under-served are production concerns for multi-agent systems. First, cost accountability: Which agent or decision caused which token, dollar, or system cost? How to enforce budget policies across agents? Second, multi-agent coordination: How do multiple agents interact—orchestration patterns, handoffs, conflicts? What about cross-agent causality and resource attribution? Third, system-level observability: How to correlate agent intents with system actions like file I/O, network calls, subprocess spawning? How to capture tool execution outcomes versus the agent's expectations? Our paper addresses this gap by formalizing the instrumentation and semantic gaps and proposing system-level, multi-agent, cost-aware observability."
+Speaker Script (0:50):
+"Agent-level frameworks define what to capture. AgentOps proposes a lifecycle and artifact taxonomy: goals, plans, tools, sessions, observations, actions—focused on agent lifecycle tracing with session replay. Maxim AI offers agent trajectory visualization and distributed tracing with evaluation frameworks integrated. PromptLayer provides OTel-compatible traces with prompt versioning and A/B testing, tracking cost per prompt variant. WhyLabs LangKit adds text quality metrics—PII detection, toxicity, sentiment—with drift detection for LLM outputs. But there's a research gap. Many works focus on single agent's internal coherence: Did this agent reason correctly given its prompt and tools? Can we reconstruct the agent's reasoning trace? Under-served are production concerns for multi-agent systems. First, cost accountability: Which agent or decision caused which token, dollar, or system cost? How to enforce budget policies across agents? Second, multi-agent coordination: How do multiple agents interact—orchestration patterns, handoffs, conflicts? What about cross-agent causality and resource attribution? Third, system-level observability: How to correlate agent intents with system actions like file I/O, network calls, subprocess spawning? How to capture tool execution outcomes versus the agent's expectations? Our paper addresses this gap by formalizing the instrumentation and semantic gaps and proposing system-level, multi-agent, cost-aware observability."
 
 ---
 
-### 12) Extended Survey: Industrial Landscape (0:50)
+### 9) Extended Survey: Industrial Landscape (0:50)
 
 Three-tier landscape
 
@@ -546,7 +532,7 @@ Speaker Script (0:50):
 
 ---
 
-### 13) Extended Survey: Practices in Industry Talks (0:50)
+### 10) Extended Survey: Practices in Industry Talks (0:50)
 
 Industry reference architectures (2024-2025)
 
@@ -578,7 +564,7 @@ Speaker Script (0:50):
 
 ---
 
-### 14) Extended Survey: Why SDK-Only Is Insufficient (0:50)
+### 11) Extended Survey: Why SDK-Only Is Insufficient (0:50)
 
 Managed/closed-source components make SDK injection impractical
 
@@ -613,7 +599,7 @@ Speaker Script (0:50):
 
 ---
 
-### 15) Academic Signals: Threat Model (IPI) (0:45)
+### 12) Academic Signals: Threat Model (IPI) (0:45)
 
 InjecAgent: Benchmarking Indirect Prompt Injections in Tool-Integrated LLM Agents
 
@@ -647,7 +633,7 @@ Speaker Script (0:45):
 
 ---
 
-### 16) Academic Signals: Cost Escalation Evidence (0:45)
+### 13) Academic Signals: Cost Escalation Evidence (0:45)
 
 Token efficiency is a primary objective in multi-agent research
 
@@ -682,7 +668,7 @@ Speaker Script (0:45):
 
 ---
 
-### 17) Academic Signals: Balanced View (Negative Results) (0:45)
+### 14) Academic Signals: Balanced View (Negative Results) (0:45)
 
 Not all multi-agent strategies are universally better
 
@@ -714,7 +700,7 @@ Speaker Script (0:45):
 
 ---
 
-### 18) Formal: Two Gaps & Requirements Derivation (0:45)
+### 15) Formal: Two Gaps & Requirements Derivation (0:45)
 
 The Two Fundamental Gaps (from your paper)
 
@@ -882,7 +868,7 @@ Speaker Script (0:45):
 
 ---
 
-### 19) Standards & Ecosystem (Why Now) (0:45)
+### 16) Standards & Ecosystem (Why Now) (0:45)
 
 OpenTelemetry GenAI: Stable conventions & ecosystem momentum
 - Stable semantic conventions: model spans, agent spans, events, metrics
@@ -923,7 +909,7 @@ Speaker Script (0:45):
 
 ## Vision (3 slides) — from paper
 
-### 20) Vision: Two-Plane Architecture (Overview) (1:00)
+### 17) Vision: Two-Plane Architecture (Overview) (1:00)
 
 Data Plane:
 - Capture cross-layer events at stable boundaries (model/network/TLS, system/process, human feedback)
@@ -952,7 +938,7 @@ Speaker Script (1:00):
 
 ---
 
-### 21) Vision: Data Plane (Evidence & Practice) (1:00)
+### 18) Vision: Data Plane (Evidence & Practice) (1:00)
 
 System layer:
 - Process/file/subprocess captured by Tetragon (eBPF tool)
@@ -986,7 +972,7 @@ Speaker Script (1:00):
 
 ---
 
-### 22) Vision: Cognitive Plane (Algorithms & Outputs) (1:00)
+### 19) Vision: Cognitive Plane (Algorithms & Outputs) (1:00)
 
 Algorithms:
 - Semantic evaluation: hallucination/loop/tool-misuse detection
