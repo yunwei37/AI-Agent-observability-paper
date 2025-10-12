@@ -7,37 +7,30 @@
 ## Flow (25 slides total, ≈17-18 min — expanded with formal definitions, requirements, evaluation)
 
 1. Title & Contributions (1 slide)
-2. 现状与痛点 (State & Motivation) — **3 slides**
-   - 2A. Safety under uncertainty / IPI
-   - 2B. Cost & ROI / Token escalation
-   - 2C. Fragmentation & integration surface / MCP + managed components
-3. **Formal Definition: Agent Observability** (1 slide) ← *NEW*
-4. 背景 I: Agent ≠ 传统软件监控 (APM/Serving) — **2 slides**
-   - 4A. What Serving/APM already gives
-   - 4B. What Serving/APM misses for agents
-5. 背景 II: Agent ≠ 模型中心监控 (LLM-centric) — **2 slides**
-   - 5A. Model-centric tools & specs
-   - 5B. Limits of model-centric approaches
-6. 背景 III: 早期 Agent-level 尝试 — **2 slides**
-   - 6A. Agent-level frameworks (what they do)
-   - 6B. What's still missing
-7. 扩展调查: 2025 工具与实践全景 — **3 slides**
-   - 7A. Industrial landscape (APM/Serving → LLM → Agent)
-   - 7B. Practices shown in talks/slides
-   - 7C. Why SDK-only is insufficient operationally
-8. Academic signals: 安全基准 & 成本升级证据 — **3 slides**
-   - 8A. Threat model: IPI
-   - 8B. Cost escalation evidence (multi-agent)
-   - 8C. Balanced view (negative results & scaling effects)
-9. **Formal: Two Gaps & Requirements** (1 slide) ← *NEW*
-10. **Standards & ecosystem (Why now) / 标准与生态** (1 slide) ← *expanded with MCP news*
-11. **Vision (3 slides)**:
-    - 11.1. Two-Plane Architecture (overview)
-    - 11.2. Data Plane (evidence & practice)
-    - 11.3. Cognitive Plane (algorithms & outputs)
-12. **Evaluation Plan & Metrics** (1 slide) ← *NEW*
-13. **Deployment Path (90 days)** (1 slide) ← *NEW*
-14. **Privacy & Compliance** (1 slide) ← *NEW*
+2. State & Motivation: Safety under uncertainty / IPI (1 slide)
+3. State & Motivation: Cost & ROI / Token escalation (1 slide)
+4. State & Motivation: Fragmentation & integration surface / MCP + managed components (1 slide)
+5. **Formal Definition: Agent Observability** (1 slide)
+6. Background I: What Serving/APM already gives (1 slide)
+7. Background I: What Serving/APM misses for agents (1 slide)
+8. Background II: Model-centric tools & specs (1 slide)
+9. Background II: Limits of model-centric approaches (1 slide)
+10. Background III: Agent-level frameworks (what they do) (1 slide)
+11. Background III: What's still missing (1 slide)
+12. Extended Survey: Industrial landscape (APM/Serving → LLM → Agent) (1 slide)
+13. Extended Survey: Practices shown in talks/slides (1 slide)
+14. Extended Survey: Why SDK-only is insufficient operationally (1 slide)
+15. Academic signals: Threat model (IPI) (1 slide)
+16. Academic signals: Cost escalation evidence (multi-agent) (1 slide)
+17. Academic signals: Balanced view (negative results & scaling effects) (1 slide)
+18. **Formal: Two Gaps & Requirements** (1 slide)
+19. **Standards & ecosystem (Why now)** (1 slide)
+20. **Vision: Two-Plane Architecture (overview)** (1 slide)
+21. **Vision: Data Plane (evidence & practice)** (1 slide)
+22. **Vision: Cognitive Plane (algorithms & outputs)** (1 slide)
+23. **Evaluation Plan & Metrics** (1 slide)
+24. **Deployment Path (90 days)** (1 slide)
+25. **Privacy & Compliance** (1 slide)
 
 ---
 
@@ -48,20 +41,20 @@
 | Section | Slides | Time | Content |
 |---------|--------|------|---------|
 | 1. Title & Contributions | 1 | 30s | Contributions + visual schematic |
-| 2. State & Motivation | 3 | 2-3 min | 2A: IPI/Safety; 2B: Cost/ROI; 2C: Fragmentation/MCP |
-| 3. Formal Definition | 1 | 45s | Agent Observability definition (formal) |
-| 4. Background I (APM/Serving) | 2 | 1.5 min | 4A: What they give; 4B: What they miss |
-| 5. Background II (LLM-centric) | 2 | 1.5 min | 5A: Tools & specs; 5B: Limits |
-| 6. Background III (Agent-level) | 2 | 1.5 min | 6A: What they do; 6B: What's missing |
-| 7. Extended Survey | 3 | 2-3 min | 7A: Landscape; 7B: Practices; 7C: SDK limits |
-| 8. Academic Signals | 3 | 2-3 min | 8A: IPI; 8B: Cost escalation; 8C: Balanced view |
-| **Subtotal (sections 1-8)** | **17** | **11-12 min** | **Survey-heavy foundation** |
-| 9. Two Gaps & Requirements | 1 | 45s | Instrumentation & Semantic gaps → R1-R4 |
-| 10. Standards & Ecosystem | 1 | 45-60s | OTel GenAI, MCP (Windows/Reuters), managed |
-| 11. Vision | 3 | 3 min | 11.1: Two-Plane; 11.2: Data; 11.3: Cognitive |
-| 12. Evaluation Plan | 1 | 45s | Security, Cost, Reliability, Standards metrics |
-| 13. Deployment Path (90d) | 1 | 45s | P0-P3 roadmap |
-| 14. Privacy & Compliance | 1 | 45s | Redaction, sampling, policies |
+| 2-4. State & Motivation | 3 | 2.5 min | Safety/IPI, Cost/ROI, Fragmentation/MCP |
+| 5. Formal Definition | 1 | 45s | Agent Observability definition (formal) |
+| 6-7. Background I (APM/Serving) | 2 | 1.5 min | What they give; What they miss |
+| 8-9. Background II (LLM-centric) | 2 | 1.5 min | Tools & specs; Limits |
+| 10-11. Background III (Agent-level) | 2 | 1.5 min | What they do; What's missing |
+| 12-14. Extended Survey | 3 | 2.5 min | Landscape; Practices; SDK limits |
+| 15-17. Academic Signals | 3 | 2.25 min | IPI; Cost escalation; Balanced view |
+| **Subtotal (slides 1-17)** | **17** | **12-13 min** | **Survey-heavy foundation** |
+| 18. Two Gaps & Requirements | 1 | 45s | Instrumentation & Semantic gaps → R1-R4 |
+| 19. Standards & Ecosystem | 1 | 45s | OTel GenAI, MCP (Windows), managed |
+| 20-22. Vision | 3 | 2.75 min | Two-Plane; Data Plane; Cognitive Plane |
+| 23. Evaluation Plan | 1 | 45s | Security, Cost, Reliability, Standards metrics |
+| 24. Deployment Path (90d) | 1 | 45s | P0-P3 roadmap |
+| 25. Privacy & Compliance | 1 | 45s | Redaction, sampling, policies |
 | **Total** | **25** | **17-18 min** | |
 
 ---
@@ -98,7 +91,7 @@
 
 ---
 
-### 2A) Safety Under Uncertainty / 不确定性带来的安全 (0:50)
+### 2) Safety Under Uncertainty (0:50)
 
 **Challenge:** Indirect Prompt Injection (IPI) systematically compromises tool-using agents
 
@@ -142,7 +135,7 @@
 
 ---
 
-### 2B) Cost & ROI / 成本与投资回报 (0:55)
+### 3) Cost & ROI (0:55)
 
 **Challenge:** Multi-agent orchestration boosts accuracy but escalates costs on two fronts
 
@@ -211,7 +204,7 @@ Cost(task) ≈ Σ tokens_i · price_i + Σ API_j + Σ infra_k
 
 ---
 
-### 2C) Fragmentation & Integration Surface / 供应商与栈碎片化 (0:50)
+### 4) Fragmentation & Integration Surface (0:50)
 
 **Challenge:** Multi-vendor stacks create complex ownership and integration boundaries
 
@@ -299,7 +292,7 @@ Cost(task) ≈ Σ tokens_i · price_i + Σ API_j + Σ infra_k
 
 ---
 
-### 3) Formal Definition: Agent Observability (0:45)
+### 5) Formal Definition: Agent Observability (0:45)
 
 **Formal System Model**
 
@@ -343,19 +336,19 @@ Agent observability is the capability to:
 
 ---
 
-**Formal Problem Decomposition (三大痛点)**
+**Formal Problem Decomposition (Three Pain Points)**
 
-1. **安全 (Safety)**
+1. **Safety**
    - **Challenge:** Uncertainty + complexity → semantic failures + adversarial threats
    - **Examples:** IPI, tool misuse, credential leakage
    - **Requirement:** Audit-quality trajectory traces with boundary-aligned capture
 
-2. **成本 (Cost)**
+2. **Cost**
    - **Challenge:** Multi-layer, non-linear cost growth
    - **Examples:** Multi-agent token escalation (7.5×), infrastructure overhead (70% of API)
    - **Requirement:** $/task & tokens/solve SLIs, budget policies, cost attribution
 
-3. **碎片化 (Fragmentation)**
+3. **Fragmentation**
    - **Challenge:** Multi-vendor, multi-layer stacks with mixed ownership
    - **Examples:** SaaS models, managed agents (Claude Code), MCP tools
    - **Requirement:** Standard telemetry (OTel GenAI), boundary capture, cross-vendor correlation
@@ -381,7 +374,7 @@ Agent observability is the capability to:
 
 ---
 
-### 4A) What Serving/APM Already Gives You
+### 6) Background I: What Serving/APM Already Gives You (0:45)
 
 **Infrastructure SLOs: throughput, latency, GPU/memory, error rates**
 
@@ -406,7 +399,7 @@ Agent observability is the capability to:
 
 ---
 
-### 3B) What Serving/APM Misses for Agents
+### 7) Background I: What Serving/APM Misses for Agents (0:45)
 
 **These SLOs do NOT answer:**
 
@@ -426,7 +419,7 @@ Agent observability is the capability to:
 
 ---
 
-### 4A) Model-Centric Tools & Specs
+### 8) Background II: Model-Centric Tools & Specs (0:45)
 
 **OpenTelemetry GenAI: The key schema for portability**
 
@@ -454,7 +447,7 @@ Agent observability is the capability to:
 
 ---
 
-### 4B) Limits of Model-Centric Approaches
+### 9) Background II: Limits of Model-Centric Approaches (0:45)
 
 **Often stop at model boundary**
 
@@ -481,7 +474,7 @@ Agent observability is the capability to:
 
 ---
 
-### 5A) Agent-Level Frameworks (What They Do)
+### 10) Background III: Agent-Level Frameworks (What They Do) (0:45)
 
 **AgentOps: Taxonomy & lifecycle tracing**
 - Defines **artifacts:** goals, plans, tools, sessions, observations, actions
@@ -510,7 +503,7 @@ Agent observability is the capability to:
 
 ---
 
-### 5B) What's Still Missing
+### 11) Background III: What's Still Missing (0:45)
 
 **Single-agent focus dominates**
 
@@ -542,7 +535,7 @@ Agent observability is the capability to:
 
 ---
 
-### 6A) Industrial Landscape (APM/Serving → LLM → Agent)
+### 12) Extended Survey: Industrial Landscape (0:50)
 
 **Three-tier landscape**
 
@@ -561,7 +554,7 @@ Agent observability is the capability to:
 
 ---
 
-### 6B) Practices Shown in Talks/Slides
+### 13) Extended Survey: Practices in Industry Talks (0:50)
 
 **Industry reference architectures (2024-2025)**
 
@@ -590,7 +583,7 @@ Agent observability is the capability to:
 
 ---
 
-### 6C) Why SDK-Only Is Insufficient Operationally
+### 14) Extended Survey: Why SDK-Only Is Insufficient (0:50)
 
 **Managed/closed-source components make SDK injection impractical**
 
@@ -622,7 +615,7 @@ Agent observability is the capability to:
 
 ---
 
-### 7A) Threat Model: IPI
+### 15) Academic Signals: Threat Model (IPI) (0:45)
 
 **InjecAgent: Benchmarking Indirect Prompt Injections in Tool-Integrated LLM Agents**
 
@@ -653,7 +646,7 @@ Agent observability is the capability to:
 
 ---
 
-### 7B) Cost Escalation Evidence (Multi-Agent)
+### 16) Academic Signals: Cost Escalation Evidence (0:45)
 
 **Token efficiency is a primary objective in multi-agent research**
 
@@ -685,7 +678,7 @@ Agent observability is the capability to:
 
 ---
 
-### 7C) Balanced View (Negative Results & Scaling Effects)
+### 17) Academic Signals: Balanced View (Negative Results) (0:45)
 
 **Not all multi-agent strategies are universally better**
 
@@ -714,7 +707,7 @@ Agent observability is the capability to:
 
 ---
 
-### 9) Formal: Two Gaps & Requirements Derivation (0:45)
+### 18) Formal: Two Gaps & Requirements Derivation (0:45)
 
 **The Two Fundamental Gaps (from your paper)**
 
@@ -882,7 +875,7 @@ Agent observability is the capability to:
 
 ---
 
-### 10) Standards & Ecosystem (Why Now) / 标准与生态
+### 19) Standards & Ecosystem (Why Now) (0:45)
 
 **OpenTelemetry GenAI: Stable conventions & ecosystem momentum**
 - **Stable semantic conventions:** model spans, **agent spans**, events, metrics
@@ -920,15 +913,15 @@ Agent observability is the capability to:
 
 ## Vision (3 slides) — from paper
 
-### 11.1) Two-Plane Architecture (Overview) / 两个平面 (总览)
+### 20) Vision: Two-Plane Architecture (Overview) (0:55)
 
-**Data Plane 数据平面:**
+**Data Plane:**
 - Capture cross-layer events at **stable boundaries** (model/network/TLS, system/process, human feedback)
 - **No in-app SDK required**, suitable for **closed-source/managed** components
 - Unify mapping to **OTel GenAI agent/model spans**
 - *Source: [OTel GenAI](https://opentelemetry.io/docs/specs/semconv/gen-ai/)*
 
-**Cognitive Plane 认知平面:**
+**Cognitive Plane:**
 - **Agents observe agents**: semantic evals, trajectory reconstruction, cross-layer causality/cost correlation, policy & budget actions
 - Scales beyond manual analysis
 
@@ -939,7 +932,7 @@ Agent observability is the capability to:
 
 ---
 
-### 11.2) Data Plane (Evidence & Practice) / 数据平面 (方法)
+### 21) Vision: Data Plane (Evidence & Practice) (0:55)
 
 **System layer:**
 - Process/file/subprocess captured by **Tetragon** (eBPF tool)
@@ -964,7 +957,7 @@ Agent observability is the capability to:
 
 ---
 
-### 11.3) Cognitive Plane (Algorithms & Outputs) / 认知平面
+### 22) Vision: Cognitive Plane (Algorithms & Outputs) (0:55)
 
 **Algorithms:**
 - Semantic evaluation: hallucination/loop/tool-misuse detection
@@ -980,7 +973,7 @@ Agent observability is the capability to:
 
 ---
 
-### 12) Evaluation Plan & Metrics
+### 23) Evaluation Plan & Metrics (0:45)
 
 **Security Metrics:**
 - **Attack capture rate:** % of IPI attacks detected (InjecAgent benchmark)
@@ -1011,7 +1004,7 @@ Agent observability is the capability to:
 
 ---
 
-### 13) Deployment Path (90 Days)
+### 24) Deployment Path (90 Days) (0:45)
 
 **P0: Boundary Tracing (Weeks 1-2)**
 - **Boundary tracing** around agent processes:
@@ -1045,7 +1038,7 @@ Agent observability is the capability to:
 
 ---
 
-### 14) Privacy & Compliance
+### 25) Privacy & Compliance (0:45)
 
 **Threat: Overly invasive capture risks PII/compliance violations**
 
