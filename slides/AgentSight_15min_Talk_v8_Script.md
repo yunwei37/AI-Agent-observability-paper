@@ -37,9 +37,7 @@ To fix this, we need to optimize the heavy steps. Fix loops and wrong arguments 
 
 Let me frame the broader context and define this semantic gap more precisely. Agentic systems in production are powerful. Agents modify files, spawn processes, and execute code autonomously. But this brings non-deterministic behavior that fundamentally breaks traditional observability paradigms.
 
-Here's a concrete example of the gap in action. Imagine an agent tasked with code refactoring. Due to a malicious prompt it reads from an external URL in search results when looking for API documentation, the agent gets an indirect prompt injection. Now, application-level monitoring sees a benign intent: "refactor code." It sees a successful tool execution. But it's completely blind to what happens at the system level. Meanwhile, system monitoring sees a bash process writing to a file and reading slash etc slash passwd. But without semantic context, these look like routine operations.
-
-Neither side can bridge the gap to understand that a benign intention has been twisted into a malicious action. This is the core problem: we have two disconnected views. The intent side shows prompts and responses, the high-level why. The action side shows syscalls and processes, the low-level what. What we desperately need is causal linkage from LLM output to system behavior.
+As we show in the example before, neither side can bridge the gap to understand that a benign intention has been twisted into a malicious action. This is the core problem: we have two disconnected views. The intent side shows prompts and responses, the high-level why. The action side shows syscalls and processes, the low-level what. What we desperately need is causal linkage from LLM output to system behavior.
 
 This gap creates a unique threat model for AI agents. We face risks like prompt injection attacks where malicious instructions get embedded in data. Goal drift, where the agent slowly deviates from its original purpose. And unintended capability escalation, where the agent discovers and uses system capabilities it wasn't supposed to have. That's the semantic gap we're addressing.
 
