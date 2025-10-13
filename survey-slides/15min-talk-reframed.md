@@ -55,7 +55,7 @@ Key Contributions:
    - Plus: Evaluation metrics, deployment roadmap, privacy framework
 
 Speaker Script (0:30):
-"Thanks for joining. Production agent systems are increasingly becoming black boxes—autonomous, non-deterministic, and opaque. Observability is no longer optional; it's a non-negotiable foundation for trust. I'll show what breaks—safety, cost, and fragmentation—survey current tools, isolate two gaps, explain why emerging standards make this solvable now, and close with our Two-Plane architecture. The framing comes from our paper."
+"Thanks for joining. Production agent systems are becoming black boxes—autonomous, non-deterministic, opaque. Observability isn't optional anymore; it's the foundation for trust. Today I'll show you what breaks: safety, cost, and fragmentation. Then I'll survey current tools, isolate two critical gaps, and explain why emerging standards make this solvable right now. I'll close with our Two-Plane architecture from the paper."
 
 #### Slide Deck (Visual)
 
@@ -112,7 +112,7 @@ Visual:
 - Right: Pipeline diagram: `Attacker Content → Tool Output → Agent Reasoning → Harmful Action`
 
 Speaker Script (0:50):
-"First, safety. In tool contexts, agents face indirect prompt injection—malicious content inside web pages, emails, repos, or files that causes bad tool use. InjecAgent benchmarks this: 1,054 cases, 17 user tools, 62 attacker tools, evaluating 30 agent frameworks. Vulnerabilities persist across implementations. Attack surfaces include web scraping, email ingestion, file processing, repository cloning. Concrete outcomes: data exfiltration, unauthorized actions, malicious code execution. These are semantic failures—no 5xx error, just plausible but wrong behavior. And here's the critical challenge: agents are non-deterministic. The same prompt can yield different reasoning paths, making traditional debugging methods insufficient. This demands audit-quality trajectory traces with boundary-aligned capture."
+"First, safety. Agents face indirect prompt injection—malicious content in web pages, emails, repos, or files that hijacks tool use. InjecAgent benchmarks this threat: 1,054 test cases, 17 user tools, 62 attacker tools, testing 30 agent frameworks. Vulnerabilities persist across all implementations. Attack surfaces? Web scraping, email ingestion, file processing, repository cloning. The outcomes are serious: data exfiltration, unauthorized actions, malicious code execution. Here's what makes this hard: these are semantic failures. No 5xx error, no crash—just plausible but wrong behavior. Worse, agents are non-deterministic. Same prompt, different reasoning paths every time. Traditional debugging won't cut it. We need audit-quality trajectory traces with boundary-aligned capture."
 
 #### Slide Deck (Visual)
 
@@ -190,7 +190,7 @@ Visual:
 - Right: Before/After platform optimization (P99 latency, memory)
 
 Speaker Script (0:55):
-"Second, cost. Multi-agent orchestration increases accuracy but escalates costs on two fronts. On tokens, research shows multi-agent debate drives significant token growth. S²-MAD at NAACL-25 identifies this as a critical problem—token efficiency must become a first-class design objective. Economical Pipeline work at ICLR documents substantial token overhead intrinsic to multi-agent communication. Another ICLR study shows token growth can reach approximately 7.5 times in certain scaling regimes. But recent systems work reveals infrastructure matters too: TrEnv shows serverless overhead can be ≈70% of LLM API cost for agent workloads. Infrastructure costs can dominate total spend with significant variability across deployment models. So cost governance needs both token and infrastructure observability."
+"Second, cost. Multi-agent orchestration boosts accuracy but escalates costs on two fronts. First, tokens. Research shows multi-agent debate drives massive token growth. S²-MAD at NAACL-25 calls this a critical problem—token efficiency must be a first-class design objective. ICLR work on Economical Pipeline documents substantial overhead intrinsic to multi-agent communication. Another ICLR study shows token growth hitting 7.5× in certain regimes. But here's the surprise: infrastructure matters even more. TrEnv shows serverless overhead can be 70% of your LLM API cost for agent workloads. Infrastructure can dominate total spend with huge variability across deployment models. Bottom line: cost governance needs both token and infrastructure observability."
 
 #### Slide Deck (Visual)
 
