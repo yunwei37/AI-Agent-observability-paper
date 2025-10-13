@@ -64,17 +64,7 @@ Speaker Script (0:30):
 
 *Towards Agent-Oriented Observability*
 
-**Key Contributions:**
-
-1. **Systematize the Landscape**
-   Three observability silos: APM/Serving • LLM-centric • Agent-level
-
-2. **Formalize the Problem**
-   Two fundamental gaps: Instrumentation • Semantic
-
-3. **Propose the Solution**
-   Two-Plane Architecture: Data Plane • Cognitive Plane
-
+Yangpen Hu, Yusheng Zheng
 **Visual:** Flow diagram:
 `[Three Silos] → [Two Gaps] → [Two-Plane Solution]`
 
@@ -126,25 +116,15 @@ Speaker Script (0:50):
 
 #### Slide Deck (Visual)
 
-**Safety Under Uncertainty**
+**The #1 Safety Threat: Indirect Prompt Injection**
 
-**Challenge:** Indirect Prompt Injection (IPI) systematically compromises tool-using agents
+Malicious content (files, websites) hijacks agent behavior → "quiet failures"
 
-**InjecAgent Benchmark:**
-• 1,054 test cases across 30 agent frameworks (GPT-4, Claude, open-source)
-• 17 user tools, 62 attacker tools
-• Attack surfaces: Web scraping, email ingestion, file processing, repository cloning
+**Problem:** No error signal—agent just does the wrong thing
 
-**Attack Outcomes:**
-• Data exfiltration to attacker servers
-• Unauthorized actions without user intent
-• Malicious code execution
+**Visual:** Simple diagram: `Malicious PDF → Agent → Sends data to attacker.com`
 
-**Key Finding:** Quiet failures—no errors, just plausible but wrong behavior
-
-**Visual:** Pipeline diagram: Attacker Content → Tool Output → Agent Reasoning → Harmful Action
-
-*Footer: ¹ACL Findings 2024*
+*Footer: InjecAgent, ACL Findings 2024*
 
 ---
 
@@ -214,26 +194,20 @@ Speaker Script (0:55):
 
 #### Slide Deck (Visual)
 
-**Cost & ROI**
-
-**Challenge:** Multi-agent orchestration escalates costs on two fronts
+**Cost & ROI: Two Escalation Fronts**
 
 **Token-Level Costs:**
-• Multi-agent debate drives significant token growth
-• Token growth ~7.5× in certain scaling regimes
-• Token efficiency must become a first-class design objective
+• Multi-agent debate → ~7.5× token growth (NAACL 2025)
 
 **Infrastructure-Level Costs:**
-• Serverless overhead ≈70% of LLM API cost
-• Infrastructure costs can dominate total spend
-• Significant variability across deployment models
+• Serverless overhead ≈70% of LLM API cost (TrEnv)
 
 **Unified Cost Model:**
-Cost(task) = Algorithm (tokens) + Model (API) + Platform (infra)
+Cost(task) = Tokens + API + Infrastructure
 
-**Observability Needs:** Budget policies, loop-stop conditions, cost-aware orchestration, cross-layer attribution
+**Observability Needs:** Budget caps, loop-stop, cost attribution
 
-**Visual:** Bar chart (token growth vs agents/rounds), Pie chart (70% infra / 30% API)
+**Visual:** Bar chart (token growth), Pie chart (70% infra / 30% API)
 
 *Footer: ¹NAACL 2025, ²arXiv:2509.09525*
 
@@ -329,28 +303,21 @@ Speaker Script (0:50):
 
 #### Slide Deck (Visual)
 
-**Fragmentation & Integration Surface**
+**Fragmentation: Multi-Vendor Stacks**
 
-**Challenge:** Multi-vendor stacks create complex ownership boundaries
+**The Problem:** No single team owns end-to-end observability
 
-**Stack Ownership:**
-• Model Serving: SaaS providers (API-only black box)
-• Agent Logic: App teams (white box, controlled)
-• Infrastructure: Ops teams (shared responsibility)
-• Tools: MCP ecosystem (mixed open/closed access)
+**Four Layers:**
+• SaaS Models (OpenAI, Anthropic) — API-only
+• Agent Logic (LangChain, custom) — White box
+• Infrastructure (K8s, containers) — Ops
+• Tools (MCP: Claude Code, Copilot) — Mixed
 
-**MCP Ecosystem Expansion (2025):**
-• Microsoft Build 2025: Windows 11 first-party MCP support, Copilot Studio integration
-• Google: Data Commons MCP Server
-• Great for capability, hard for observability
+**Challenge:** SDK injection impractical for closed components
 
-**Managed/Closed-Source Components:**
-• Claude Code, GitHub Copilot, Cursor, Windows Copilot
-• SDK injection impractical
+**Solution:** Boundary capture (TLS, syscalls, API) + OTel GenAI
 
-**Pragmatic Path:** Boundary-based capture (TLS, syscalls, API) + OTel GenAI spans
-
-**Visual:** Graphical swimlane diagram showing 4-layer stack (SaaS Model, App Agent, Ops System, MCP Tools) with boundary capture points
+**Visual:** 4-layer swimlane with boundary capture points
 
 *Footer: ¹Microsoft Build 2025, ²Anthropic*
 
@@ -399,23 +366,15 @@ Speaker Script (0:45):
 
 **Standards & Ecosystem (Why Now)**
 
-**OpenTelemetry GenAI:**
-• Stable semantic conventions: model spans, agent spans, events, metrics
-• OTel Blog (Mar 6, 2025): "AI Agent Observability - Evolving Standards and Best Practices"
-• Shared schema for vendor-neutral telemetry exchange
+**Three Converging Standards:**
 
-**OpenInference & OpenLLMetry:**
-• OTel-compatible tracers for LLM frameworks
-• Bridge Python/JS/Java ecosystems to backends (Langfuse, Phoenix, Datadog)
+1. **OTel GenAI:** Stable agent + model spans (Mar 2025)
+2. **OpenInference/OpenLLMetry:** OTel-compatible tracers
+3. **MCP:** Tool protocol with platform support (Microsoft, Google)
 
-**MCP (Model Context Protocol):**
-• "USB-C for AI tools"—standardizes agent-tool connections
-• Microsoft Build 2025: Windows first-party MCP support
-• Google: Data Commons MCP Server
+**Why This Matters:** Standards enable boundary-based observability for closed systems
 
-**Pragmatic Path:** Boundary-based capture + OTel GenAI spans for closed-source components
-
-*Footer: ¹OTel Blog 2025, ²Microsoft Build 2025, ³Reuters/The Verge*
+*Footer: ¹OTel Blog 2025, ²Microsoft Build 2025*
 
 ---
 
@@ -472,23 +431,18 @@ Speaker Script (0:50):
 **Background I: APM/Serving**
 
 **What It Gives:**
-• Infrastructure SLOs: throughput, latency, GPU/memory, error rates
-• vLLM: Prometheus metrics (tokens/s, queue depth, TTFT, TPOT)
-• NVIDIA Triton: GPU/request stats, Performance Analyzer
-• Cloud recipes: GCP/IBM production monitoring practices
+• Infrastructure SLOs: throughput, latency, GPU, tokens/s (vLLM, Triton)
 
 **What It Misses for Agents:**
-• Intent/trajectory correctness
-• Tool justification
-• Goal attainment
+• Intent, tool justification, goal attainment
 • Cross-layer cost attribution
-• Behavioral assurance under policy
+• Behavioral assurance
 
-**Key Distinction:** Request trace (infrastructure) vs Decision trajectory (behavioral)
+**Key Distinction:** Request trace (infra) ≠ Decision trajectory (behavior)
 
-**Visual:** Split diagram showing PromQL/Grafana panels vs request trace vs decision trajectory comparison
+**Visual:** Split diagram (Grafana metrics vs decision trajectory)
 
-*Footer: ¹vLLM, ²NVIDIA Triton, ³GCP/IBM*
+*Footer: ¹vLLM, ²Triton*
 
 ---
 
@@ -553,22 +507,19 @@ Speaker Script (0:50):
 **Background II: Model-Centric Tools**
 
 **Capabilities:**
-• OTel GenAI: Stable semantic conventions (model spans, agent spans, events, metrics)
-• OpenInference & OpenLLMetry: OTel-compatible tracers for LLM frameworks
-• Langfuse: OTLP backend with UI for traces/evals/costs
-• LangSmith, Honeycomb, Datadog: Chain tracing, cost tracking
+• OTel GenAI: Stable agent/model spans
+• OpenInference, OpenLLMetry: OTel-compatible tracers
+• Langfuse, LangSmith, Datadog: Chain tracing, cost tracking
 
 **Limits:**
-• Strong on model I/O (prompts, completions, tokens, latency)
-• Weak on system layer (process, file, subprocess)
-• Weak on network layer (TLS plaintext, cross-service calls)
-• Weak on tool execution layer (OS/filesystem actions)
+• Strong: Model I/O (prompts, tokens, latency)
+• Weak: System layer (process, files), network (TLS), tool execution
 
-**Challenges:** Requires app-side SDKs, framework-specific instrumentation, weak cross-layer correlation
+**Challenge:** App-side SDKs required, weak cross-layer correlation
 
-**Visual:** Spec-stack diagram and coverage heatmap (strong/medium/weak layers)
+**Visual:** Coverage heatmap (strong/weak layers)
 
-*Footer: ¹OTel GenAI, ²OpenInference, ³Langfuse*
+*Footer: ¹OTel GenAI, ²Langfuse*
 
 ---
 
@@ -739,33 +690,31 @@ Visual:
 - Middle: Reference architecture diagram (OTel spans → backends; Prom metrics → Grafana)
 - Bottom: Split diagram showing "Where SDKs cannot go" (IDE/OS/SaaS closed) vs "Where boundaries are observable" (TLS/syscall/API layers)
 
-Speaker Script (1:30):
-"Let me survey the industrial landscape across three dimensions. First, the three-tier stack. Serving and APM—vLLM and NVIDIA Triton—provide production Prometheus metrics and dashboards with Perf Analyzer for throughput and latency tuning. LLM-centric tooling is converging on OpenTelemetry GenAI semantics via OpenInference and OpenLLMetry. Critically, Langfuse can ingest OTLP traces directly, acting as an OTel backend. Commercial platforms like Honeycomb and Datadog have launched LLM Observability products. Then agent-level platforms like Maxim, PromptLayer, and LangKit add trajectory views, evaluations, and text metrics. The key observation: OTel compatibility is emerging as the interoperability layer.
+Speaker Script (1:00):
+"The industrial landscape has three tiers. At the bottom, APM and Serving tools like vLLM give us infrastructure health. In the middle, LLM-centric tools like LangSmith and Langfuse focus on model inputs and outputs, and are rapidly adopting OpenTelemetry. At the top, Agent-level tools like Maxim AI focus on the agent's behavior.
 
-Second, industry reference architectures are converging on best practices. Adrian Cole's KubeCon talk on GenAI Framework Observability covers OTel GenAI semantic conventions plus MCP updates and shows agent span patterns in practice. The OpenTelemetry AI Agent Observability blog tracks evolving standards and multi-vendor telemetry exchange. Production monitoring patterns combine OTel and Prometheus: IBM and GCP use vLLM exporters with Grafana dashboards. The pattern is model spans via OTel, infra metrics via Prometheus, correlated by trace ID. Vendor conferences like Arize Observe 2025 and LangChain Interrupt 2025 are sharing production case studies and agent reliability patterns.
-
-Third, operationally, you cannot always inject SDKs into the runtime. Managed or closed-source components exist throughout the stack. Examples: Developer agents like Claude Code in VS Code, JetBrains, and terminal; GitHub Copilot embedded in IDEs; Cursor as a forked VS Code—all closed-source binaries with proprietary integrations. OS and platform integrations like Windows Copilot, Copilot Studio, and first-party MCP servers from Microsoft and Google. SaaS model providers—OpenAI, Anthropic, Google APIs—where you have no access to internal serving infrastructure. The pragmatic path is boundary-based capture—network, TLS, syscalls—plus standardized spans via OTel GenAI for correlation, without modifying proprietary code."
+However, two production constraints are forcing a shift. First, SDKs are insufficient. You simply cannot inject an SDK into managed components like Claude Code, Windows Copilot, or proprietary SaaS APIs. This leads to the second constraint: standards are essential. Industry is converging on OpenTelemetry to connect these different, often closed, systems. This makes boundary-based capture a necessity, not a choice."
 
 #### Slide Deck (Visual)
 
-**Industrial Landscape**
+**Industrial Landscape: Three Tiers & Production Constraints**
 
-**Three-Tier Stack:**
-• APM/Serving: vLLM, Triton (Prometheus metrics, infra SLOs)
-• LLM-centric: LangSmith, Langfuse, OpenLLMetry (OTel-compatible, model I/O)
-• Agent-level: Maxim, PromptLayer, LangKit (trajectory views, evaluations)
-• Key: OTel compatibility emerging as interoperability layer
+**The Three Tiers of Agent Observability**
 
-**Industry Reference Architectures:**
-• Industry adoption: KubeCon, OTel Blog, IBM/GCP patterns, vendor conferences (Arize, LangChain)
+| Layer           | Representative Tools        | Core Strength                     |
+|-----------------|-----------------------------|-----------------------------------|
+| **APM/Serving** | vLLM, Triton                | Infrastructure SLOs (GPU, latency)|
+| **LLM-centric** | LangSmith, Langfuse, Phoenix| Model I/O, OTel Adoption          |
+| **Agent-level** | Maxim AI, PromptLayer       | Agent Trajectory & Behavior       |
 
-**SDK Limitations:**
-• Cannot inject SDKs: Claude Code, Copilot, Cursor, Windows integrations, SaaS APIs
-• Pragmatic path: Boundary capture (TLS, syscalls) + OTel GenAI spans
+**Two Key Production Constraints**
 
-**Visual:** 3-column landscape matrix; reference architecture diagram; SDK-accessible vs boundary-observable split
+1. **SDKs Are Insufficient:** Cannot inject into managed components (Claude Code, Windows Copilot) or SaaS APIs
+2. **Standards Are Essential:** Industry converging on OpenTelemetry for interoperability
 
-*Footer: ¹KubeCon 2024, ²OTel Blog 2025, ³IBM/GCP*
+**Visual:** Clean 3-row table + two icons (Closed Components & OTel Standard)
+
+*Footer: ¹vLLM, ²OTel Blog 2025, ³Microsoft Build 2025*
 
 ---
 
@@ -859,32 +808,32 @@ Sources:
 
 Visual: Three-part slide — Left: Attack surface table (web/email/files/repos → IPI pipeline); Center: Bar chart (tokens vs #agents/#rounds); Right: Win/tie/lose chart (MAD vs CoT) with "~7.5× token multiplier" callout
 
-Speaker Script (1:15):
-"Let me cover three key academic signals. First, safety: InjecAgent formalizes Indirect Prompt Injection across tool families as a systematic benchmark. It reports practical vulnerability across frameworks—the formalization is: attacker-controlled content enters via tool output, influences agent reasoning, leads to harmful action. This is an ACL Findings 2024 paper evaluating 30 agents across 1,054 cases. Attack goals include data exfiltration, unauthorized actions, and malicious code execution. Key findings: non-trivial success rates even on strong agents using GPT-4, Claude, etc. Vulnerabilities persist across agent frameworks. Quiet failures: the agent performs a harmful action without user awareness—no error, just wrong behavior. This motivates trajectory-aware auditing and the need to capture tool outputs, agent reasoning, and actions taken with boundary-aligned signals. Second, cost: token efficiency has become a primary research objective. NAACL-25 S²-MAD shows multi-agent debate improves accuracy but drives token growth—their method reduces tokens up to 94.5% while keeping performance within 2% of baseline, explicitly targeting token efficiency as a first-class metric. This confirms the need for $/task and tokens/solve as SLIs. ICLR-25 work on economical communication pipelines documents substantial token overhead intrinsic to multi-agent systems—communication between agents is a major cost driver. Another ICLR paper on scaling multi-agent systems shows token length can grow approximately 7.5 times in certain scaling regimes. As the number of agents and rounds increases, token costs compound non-linearly. Third, balanced view: not all multi-agent strategies are universally better. Recent work titled 'Stop Overvaluing Multi-Agent Debate' evaluates MAD across multiple models and benchmarks and finds it often fails to beat Chain-of-Thought. Win-tie-lose ratios show mixed results. The caution is: don't assume MAD always justifies the extra cost. Scaling effects from ICLR show token growth can reach 7.5 times in specific regimes. This demands empirical cost-benefit analysis for each use case. It's not just 'more agents equals better'—it requires cost discipline. For observability, this means we must measure cost versus outcome: $/task versus success rate. Support A/B testing of CoT versus MAD versus hybrid approaches. Provide budget enforcement—stop if cost exceeds threshold. Enable post-hoc analysis: Was this multi-agent orchestration worth it?"
+Speaker Script (1:00):
+"Academia is validating these challenges. First, on safety, the InjecAgent paper from ACL 2024 formally recognizes Indirect Prompt Injection as a systematic threat, highlighting that agents often fail quietly, without any errors. This proves the need for deep, audit-quality tracing.
+
+Second, on cost, recent papers from top conferences like NAACL and ICLR now treat token efficiency as a first-class research problem. They provide hard data on non-linear cost growth in multi-agent systems, confirming that cost is not just an engineering issue but a fundamental research challenge.
+
+Finally, a more balanced view is emerging. A 2025 paper warns against overvaluing complex agent strategies, showing they don't always justify their high cost. This reinforces our point that cost-benefit analysis is critical. The academic consensus is clear: safety and cost are central problems that demand a new approach to observability."
 
 #### Slide Deck (Visual)
 
-**Academic Signals: Safety, Cost & Balanced View**
+**Academic Signals: Validating the Challenges**
 
-**Safety—Indirect Prompt Injection:**
-• InjecAgent: 1,054 test cases, 30 frameworks evaluated
-• Attack model: attacker content → tool output → agent reasoning → harmful action
-• Quiet failures across frameworks demand audit-quality traces
+**1. Safety: IPI is a Formally Recognized Threat**
+- **InjecAgent (ACL Findings 2024):** Benchmarks IPI across 30 frameworks, finds persistent vulnerabilities
+- **Key Finding:** "Quiet failures" are common—demands audit-quality traces
 
-**Cost Escalation:**
-• S²-MAD: 94.5% token reduction, <2% accuracy loss
-• Token growth ~7.5× in certain regimes
-• Academic validation: $/task and tokens/solve as first-class SLIs
+**2. Cost: Token Growth is a First-Class Research Problem**
+- **S²-MAD (NAACL 2025):** Targets token reduction as primary goal for multi-agent systems
+- **ICLR 2025 Papers:** Document non-linear token growth (~7.5×) as major cost driver
 
-**Balanced View:**
-• "Stop Overvaluing MAD": MAD often fails to beat CoT
-• Requires empirical cost/benefit analysis per use case
+**3. A Balanced View is Emerging**
+- **"Stop Overvaluing MAD" (arXiv 2025):** Complex strategies don't always outperform simpler ones
+- **Implication:** Demands empirical cost-benefit analysis
 
-**Observability Implications:** Measure cost vs outcome, A/B testing, budget enforcement, post-hoc analysis
+**Visual:** Three academic papers with key takeaways (ACL, NAACL, arXiv logos if possible)
 
-**Visual:** Three-part diagram (IPI pipeline, token growth bar chart, MAD vs CoT comparison)
-
-*Footer: ¹ACL 2024, ²NAACL 2025, ³arXiv:2502.08788*
+*Footer: ¹ACL 2024, ²NAACL 2025, ³arXiv 2025*
 
 ---
 
@@ -1059,23 +1008,22 @@ Speaker Script (0:45):
 
 #### Slide Deck (Visual)
 
-**Two Gaps & Requirements Derivation**
+**Two Gaps & Requirements**
 
 **Gap 1: Instrumentation Gap**
-• Problem: Isolating causal signal from high-volume system noise
-• Challenges: Thousands of syscalls per task, framework-specific coupling, closed components
+• Causal signal lost in high-volume syscall noise
+• App-layer SDKs brittle, closed components inaccessible
 
 **Gap 2: Semantic Gap**
-• Problem: Boundary telemetry shows WHAT, not WHY
-• Missing: Intent, reasoning, goal alignment, causal linkage
+• Boundary telemetry shows WHAT, not WHY (no intent/reasoning)
 
 **Four Requirements:**
-• **R1:** Decouple capture from app internals (boundary-based)
-• **R2:** Autonomous semantic analysis at scale (Cognitive Plane)
-• **R3:** Cross-vendor schema (OTel GenAI spans)
-• **R4:** Privacy-preserving capture (redaction, sampling, retention)
+• **R1:** Boundary-based capture (kernel, TLS, API)
+• **R2:** AI-powered semantic analysis (Cognitive Plane)
+• **R3:** Standard spans (OTel GenAI)
+• **R4:** Privacy-preserving (redaction, sampling)
 
-**Visual:** Flow diagram showing Production Challenges → Two Gaps → Four Requirements
+**Visual:** Production Challenges → Two Gaps → Four Requirements
 
 *Footer: ¹Tetragon, ²Watson arXiv, ³OTel GenAI*
 
