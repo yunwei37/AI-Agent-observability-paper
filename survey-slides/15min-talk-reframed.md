@@ -55,7 +55,7 @@ Key Contributions:
    - Plus: Evaluation metrics, deployment roadmap, privacy framework
 
 Speaker Script (0:30):
-"Thanks for joining. I'll start with what breaks in production agent systems—safety, cost, and fragmentation—survey current tools, isolate two gaps, show why emerging standards make this solvable now, and close with a compact Two-Plane vision and metrics. The framing—the two gaps and planes—comes from our paper."
+"Thanks for joining. Production agent systems are increasingly becoming black boxes—autonomous, non-deterministic, and opaque. Observability is no longer optional; it's a non-negotiable foundation for trust. I'll show what breaks—safety, cost, and fragmentation—survey current tools, isolate two gaps, explain why emerging standards make this solvable now, and close with our Two-Plane architecture. The framing comes from our paper."
 
 #### Slide Deck (Visual)
 
@@ -112,7 +112,7 @@ Visual:
 - Right: Pipeline diagram: `Attacker Content → Tool Output → Agent Reasoning → Harmful Action`
 
 Speaker Script (0:50):
-"First, safety. In tool contexts, agents face indirect prompt injection—malicious content inside web pages, emails, repos, or files that causes bad tool use. InjecAgent benchmarks this: 1,054 cases, 17 user tools, 62 attacker tools, evaluating 30 agent frameworks. Vulnerabilities persist across implementations. Attack surfaces include web scraping, email ingestion, file processing, repository cloning. Concrete outcomes: data exfiltration, unauthorized actions, malicious code execution. These are semantic failures—no 5xx error, just plausible but wrong behavior. This demands audit-quality trajectory traces with boundary-aligned capture."
+"First, safety. In tool contexts, agents face indirect prompt injection—malicious content inside web pages, emails, repos, or files that causes bad tool use. InjecAgent benchmarks this: 1,054 cases, 17 user tools, 62 attacker tools, evaluating 30 agent frameworks. Vulnerabilities persist across implementations. Attack surfaces include web scraping, email ingestion, file processing, repository cloning. Concrete outcomes: data exfiltration, unauthorized actions, malicious code execution. These are semantic failures—no 5xx error, just plausible but wrong behavior. And here's the critical challenge: agents are non-deterministic. The same prompt can yield different reasoning paths, making traditional debugging methods insufficient. This demands audit-quality trajectory traces with boundary-aligned capture."
 
 #### Slide Deck (Visual)
 
@@ -424,7 +424,7 @@ Your paper's Table 1 distinction:
 Visual: Split slide — Left: PromQL/Grafana panels (throughput, latency, GPU); Right: Table 1 comparison (request trace vs decision trajectory)
 
 Speaker Script (0:50):
-"APM and Serving tools excel at infrastructure SLOs. vLLM exposes Prometheus metrics with community Grafana dashboards tracking tokens per second, queue depth, time to first token. NVIDIA Triton provides a metrics endpoint with GPU and request statistics, plus Performance Analyzer tools for profiling. Cloud providers like GCP and IBM have published production monitoring practices. These are necessary foundations for LLM serving health. But these SLOs do NOT answer: Did the agent reason correctly? Why was this tool chosen over alternatives? Did the agent achieve the user's objective? Which agent decision caused which system or model cost? Did the agent respect safety boundaries and budget constraints? Serving does not equal behavioral assurance. Our framework distinguishes request traces—HTTP span to inference call to response—from decision trajectories—goal to reasoning to tool selection to action to outcome. That's the behavioral view agents require."
+"APM and Serving tools excel at infrastructure SLOs. vLLM exposes Prometheus metrics with community Grafana dashboards tracking tokens per second, queue depth, time to first token. NVIDIA Triton provides a metrics endpoint with GPU and request statistics, plus Performance Analyzer tools for profiling. Cloud providers like GCP and IBM have published production monitoring practices. These are necessary foundations for LLM serving health. But these SLOs do NOT answer: Did the agent reason correctly? Why was this tool chosen over alternatives? Did the agent achieve the user's objective? Which agent decision caused which system or model cost? Did the agent respect safety boundaries and budget constraints? Serving does not equal behavioral assurance. This distinction matters: traditional observability focuses on request traces—HTTP span to inference call to response. Agent observability requires decision trajectories—goal to reasoning to tool selection to action to outcome. That's behavioral debugging, not just system monitoring."
 
 #### Slide Deck (Visual)
 
@@ -500,7 +500,7 @@ Example from docs:
 Visual: Split slide — Left: "Spec-stack" diagram (GenAI semconv → OpenInference/OpenLLMetry → backends); Right: "Coverage heatmap" (strong: model I/O, medium: app logic, weak: system/network/tool execution)
 
 Speaker Script (0:50):
-"The model-centric ecosystem is maturing rapidly. OpenTelemetry GenAI now defines agent spans and model spans plus events and metrics as stable semantic conventions. OpenInference and OpenLLMetry provide OTel-compatible tracing conventions for LLM frameworks, bridging Python, JavaScript, and Java ecosystems. Langfuse can act as an OTLP backend, accepting traces directly. Commercial platforms like LangSmith, Honeycomb, and Datadog have launched LLM Observability features with chain tracing and cost tracking. However, these tools are excellent for prompts and evaluations but often stop at the model boundary and require application-side SDKs or proxies. Coverage gaps emerge: strong on model I/O—prompts, completions, tokens, latency—but weak on system layer events like process spawning, file access, subprocess activity. Weak on network layer beyond HTTP—TLS plaintext, cross-service calls. Weak on tool execution layer—what actually happened on the OS or filesystem. Cross-layer correlation between agent decision, model call, system action, and cost is partial. Multi-agent coordination is often not modeled—you get spans per agent, but orchestration patterns remain unclear."
+"The model-centric ecosystem is maturing rapidly. OpenTelemetry GenAI now defines agent spans and model spans plus events and metrics as stable semantic conventions. OpenInference and OpenLLMetry provide OTel-compatible tracing conventions for LLM frameworks, bridging Python, JavaScript, and Java ecosystems. Tools like Langfuse act as OTLP backends accepting traces directly, with features for session replay and cost tracking. LangSmith from LangChain provides one-environment-variable tracing with evaluation suites. Arize Phoenix offers real-time trace visualization and LLM-as-judge evaluations. Commercial platforms like Honeycomb and Datadog have launched LLM Observability features. However, these tools excel for prompts and evaluations but often stop at the model boundary and require application-side SDKs. Coverage gaps emerge: strong on model I/O but weak on system layer events, network layer beyond HTTP, and tool execution outcomes. Cross-layer correlation between agent decision, model call, system action, and cost is partial. Multi-agent coordination is often not modeled."
 
 #### Slide Deck (Visual)
 
@@ -509,7 +509,7 @@ Speaker Script (0:50):
 **Capabilities:**
 • OTel GenAI: Stable agent/model spans
 • OpenInference, OpenLLMetry: OTel-compatible tracers
-• Langfuse, LangSmith, Datadog: Chain tracing, cost tracking
+• Tools: Langfuse (session replay), LangSmith (eval suites), Phoenix (LLM-as-judge), Datadog/Honeycomb
 
 **Limits:**
 • Strong: Model I/O (prompts, tokens, latency)
@@ -519,7 +519,7 @@ Speaker Script (0:50):
 
 **Visual:** Coverage heatmap (strong/weak layers)
 
-*Footer: ¹OTel GenAI, ²Langfuse*
+*Footer: ¹OTel GenAI, ²Langfuse, LangSmith, Phoenix*
 
 ---
 
@@ -1147,20 +1147,22 @@ Key Metrics:
 - Standards: OTel GenAI conformance, MCP tool coverage, cross-vendor correlation
 
 Speaker Script (1:00):
-"Our architecture has two inseparable planes. The Data Plane captures telemetry at stable boundaries—model endpoints, TLS traffic, system calls, and human feedback—without modifying application code. It maps events into OTel GenAI agent and model spans for vendor-neutral exchange. The Cognitive Plane uses agents that observe agents—surrogate AI observers perform semantic evaluations, reconstruct decision trajectories, reason about causes and costs across layers, and take policy actions like quarantine, budget caps, and alerts. Together they deliver the safety, cost, and control closed loop. The Data Plane provides usable signals; the Cognitive Plane provides interpretation and governance."
+"Our Two-Plane Architecture embodies emerging best practices from the field: multi-layer observability and AI-driven introspection. The Data Plane captures telemetry at stable boundaries—model endpoints, TLS traffic, system calls, and human feedback—without modifying application code. It maps events into OTel GenAI agent and model spans for vendor-neutral exchange. This is multi-layer observability in action. The Cognitive Plane uses agents that observe agents—surrogate AI observers perform semantic evaluations, reconstruct decision trajectories, reason about causes and costs across layers, and take policy actions like quarantine, budget caps, and alerts. This is AI-driven introspection, leveraging cognitive observability concepts. Together they deliver the safety, cost, and control closed loop. The Data Plane provides usable signals; the Cognitive Plane provides interpretation and governance. This architecture aligns with where the industry and research are heading."
 
 #### Slide Deck (Visual)
 
 **Vision: Two-Plane Architecture**
 
-**Data Plane:**
+**Embodies Emerging Best Practices:** Multi-layer observability + AI-driven introspection
+
+**Data Plane:** (Multi-layer observability)
 • Capture at stable boundaries (model, TLS, syscalls, human feedback)
 • No in-app SDK required
 • Map to OTel GenAI spans
 • Privacy-first: Redaction, sampling, scoped retention
 
-**Cognitive Plane:**
-• Agents observe agents
+**Cognitive Plane:** (AI-driven introspection)
+• Agents observe agents (cognitive observability)
 • Semantic evals, trajectory reconstruction, cross-layer causality
 • Policy actions: Quarantine, budget caps, alerts
 
