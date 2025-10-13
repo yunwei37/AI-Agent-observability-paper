@@ -718,122 +718,104 @@ However, two production constraints are forcing a shift. First, SDKs are insuffi
 
 ---
 
-### 10) Academic Signals: Safety, Cost & Balanced View (1:15)
+### 10) Academic Signals: Emerging Research on Agent Observability (1:15)
 
 #### Detail Content (Script)
 
-**Threat Model: Indirect Prompt Injection (IPI)**
+**Recent Academic Work (2024-2025)**
 
-InjecAgent: Benchmarking Indirect Prompt Injections in Tool-Integrated LLM Agents
-
-Scope & formalization:
-- ACL Findings 2024 systematic benchmark
-- 1,054 test cases across 17 user tools (web, email, files, repos) & 62 attacker tools
-- Evaluates 30 agent frameworks
-- Formalizes IPI attack model: *attacker-controlled content → tool output → agent reasoning → harmful action*
-
-Attack goals tested:
-- Data exfiltration: Send user data to attacker server
-- Unauthorized actions: Execute commands, modify files without user intent
-- Malicious code execution: Run attacker-provided scripts
-
-Key findings:
-- Non-trivial success rates even on strong agents (GPT-4, Claude, etc.)
-- Vulnerabilities persist across agent frameworks
-- Quiet failures: Agent performs harmful action without user awareness
-
-Implication for observability:
-- Need audit-quality trajectory traces to detect IPI
-- Capture tool outputs + agent reasoning + actions taken
-- Boundary-aligned capture (what crossed trust boundaries?)
-
-Source: [ACL Anthology 2024.findings-acl.624](https://aclanthology.org/2024.findings-acl.624/)
+Academic literature is beginning to address LLM agent observability systematically. Key contributions:
 
 ---
 
-**Cost Escalation Evidence**
+**AgentOps Taxonomy (Dong et al., 2024)**
 
-Token efficiency is a primary objective in multi-agent research
-
-NAACL-25: S²-MAD (Breaking the Token Barrier)
-- Multi-agent debate (MAD) improves accuracy but drives token growth
-- S²-MAD: Reduces tokens while maintaining accuracy
-- Explicitly targets token efficiency as first-class metric
-- Confirms need for $/task & tokens/solve SLIs
-- *Source: [NAACL 2025.naacl-long.475](https://aclanthology.org/2025.naacl-long.475.pdf)*
-
-ICLR-25: Economical Communication Pipeline
-- Documents substantial token overhead intrinsic to multi-agent pipelines
-- Communication between agents is a major cost driver
-
-ICLR-25: Scaling Multi-Agent
-- Token length can grow ~7.5× in certain scaling regimes
-- As #agents and #rounds increase, token costs compound
-
-Operational needs:
-- Budget policies: $/task limits, tokens/solve thresholds
-- Loop-stop conditions: Prevent runaway costs (e.g., max rounds, token cap)
-- Cost-aware orchestration: Route to cheaper agents when possible
-
-Sources:
-- [NAACL S²-MAD](https://aclanthology.org/2025.naacl-long.475.pdf)
-- [ICLR papers on multi-agent communication & scaling]
+Systematic mapping of agent DevOps tools + artifact taxonomy
+- arXiv paper defines observability as "actionable insights into agents' inner workings"
+- Identifies gap: Current tools cover LLM metrics/prompts but ignore agent artifacts (goals, plans, tool actions)
+- Proposes taxonomy: what to log throughout agent lifecycle (prompt templates, context memory, tool outputs, feedback loops)
+- Key insight: AI safety requires built-in observability across entire agent lifecycle
+- *Source: [arXiv:2411.05285](https://arxiv.org/abs/2411.05285)*
 
 ---
 
-**Balanced View: Not All Multi-Agent Strategies Are Better**
+**Watson: Cognitive Observability (Rombaut et al., 2024)**
 
-"Stop Overvaluing Multi-Agent Debate" (arXiv:2502.08788)
-- Across multiple models & benchmarks, MAD often fails to beat CoT (Chain-of-Thought)
-- Win/tie/lose ratios show mixed results
-- Caution: Don't assume MAD always justifies extra cost
-- *Source: [arXiv:2502.08788](https://arxiv.org/pdf/2502.08788)*
-
-Scaling effects:
-- ICLR-25 Scaling Multi-Agent: Token growth can reach ~7.5× in specific regimes
-- Need empirical cost/benefit analysis for each use case
-- Not just "more agents = better" — requires cost discipline
-
-Implication for observability:
-- Must measure cost vs. outcome ($/task vs. success rate)
-- Support A/B testing (CoT vs. MAD vs. hybrid)
-- Provide budget enforcement (stop if cost exceeds threshold)
-- Enable post-hoc analysis: "Was this multi-agent orchestration worth it?"
-
-Sources:
-- [Stop Overvaluing MAD](https://arxiv.org/pdf/2502.08788)
-- [ICLR Scaling Multi-Agent]
+New paradigm: *cognitive observability* focused on latent reasoning
+- Problem: Traditional logs/traces fail for agents—reasoning is opaque
+- Solution: Watson retroactively infers reasoning traces from agent behavior
+- Method: Uses prompt attribution to reconstruct internal decision chains without modifying agent
+- Evaluation: Surfaces actionable reasoning insights from MMLU, software engineering agents
+- Key insight: LLM-as-probe can extract hidden chain-of-thought for debugging/transparency
+- *Source: [arXiv:2411.03455](https://arxiv.org/abs/2411.03455)*
 
 ---
 
-Visual: Three-part slide — Left: Attack surface table (web/email/files/repos → IPI pipeline); Center: Bar chart (tokens vs #agents/#rounds); Right: Win/tie/lose chart (MAD vs CoT) with "~7.5× token multiplier" callout
+**AgentSight: System-Level Observability (Zheng et al., 2025)**
 
-Speaker Script (1:00):
-"Academia is validating these challenges. First, on safety, the InjecAgent paper from ACL 2024 formally recognizes Indirect Prompt Injection as a systematic threat, highlighting that agents often fail quietly, without any errors. This proves the need for deep, audit-quality tracing.
+Hybrid approach: System-level + semantic capture
+- Problem: Agent activities (code execution, OS resources) occur outside application—AI logs miss them
+- Solution: eBPF (kernel tracing) for low-level events + TLS interception for LLM API traffic
+- Correlation: Links prompts/documents → file I/O → process launches in real time
+- Evaluation: Detects prompt injections, inefficient reasoning loops, multi-agent coordination bottlenecks
+- Key insight: Bridging "inside" (intent) and "outside" (system action) achieves deeper observability
+- *Source: [ResearchGate:394322099](https://www.researchgate.net/publication/394322099)*
 
-Second, on cost, recent papers from top conferences like NAACL and ICLR now treat token efficiency as a first-class research problem. They provide hard data on non-linear cost growth in multi-agent systems, confirming that cost is not just an engineering issue but a fundamental research challenge.
+---
 
-Finally, a more balanced view is emerging. A 2025 paper warns against overvaluing complex agent strategies, showing they don't always justify their high cost. This reinforces our point that cost-benefit analysis is critical. The academic consensus is clear: safety and cost are central problems that demand a new approach to observability."
+**TRiSM for Agentic AI (Peng et al., 2025)**
+
+Trust, Risk, Security Management framework
+- Defines multi-layer architecture with "Monitoring & Governance" layer (ethical oversight, observability, compliance)
+- Accountability requirements: Logging, auditing, behavioral traces
+- Trust and Audit module: Monitors actions, logs tool usage, generates traces
+- Explainability: Systems must provide interpretable rationales for decisions
+- Key insight: Observability is integral to trustworthy agent deployments, not optional
+- *Source: [arXiv:2506.04133](https://arxiv.org/html/2506.04133v2)*
+
+---
+
+**Common Themes Across Research**
+
+1. **New tools needed:** Traditional software observability insufficient for agents
+2. **Extract hidden logic:** Methods to recover agent reasoning beyond standard logs
+3. **Lifecycle coverage:** Observability must span planning → execution → feedback
+4. **AI-powered analysis:** LLM-as-judge, agent-as-evaluator for scalable insight extraction
+5. **System integration:** Hybrid approaches combining app-level + OS-level + model-level capture
+
+**Related Trends:**
+- LLM-as-judge evaluation (Arize agent tools): One LLM scores another's trajectories
+- Multi-agent interpretability (Kim et al., 2025): Neural probes for agentic systems
+- Multi-LLM agent surveys (Guo et al., 2024): Cite observability as open challenge
+
+---
+
+Visual: Timeline diagram showing research evolution 2024-2025 with four key papers (AgentOps, Watson, TRiSM, AgentSight) and their focus areas
+
+Speaker Script (1:15):
+"Academic research is now systematically addressing agent observability. Four key contributions from 2024-2025: First, AgentOps from Dong et al. provides a comprehensive taxonomy—what artifacts to log throughout the agent lifecycle, from goals and plans to tool outputs and feedback loops. They show current tools focus on LLM metrics but miss core agent artifacts. Second, Watson from Rombaut et al. introduces cognitive observability—using LLM-powered probes to retroactively infer an agent's hidden reasoning traces without modifying the agent runtime. They demonstrate this on MMLU and software engineering benchmarks, surfacing actionable insights. Third, AgentSight from Zheng et al. takes a hybrid approach—eBPF for kernel-level events plus TLS interception for LLM API traffic, then correlates them in real time. They detect prompt injections, reasoning loops, and multi-agent bottlenecks by bridging intent and system actions. Fourth, TRiSM from Peng et al. frames observability as essential for trust—defining monitoring and governance layers with logging, auditing, and explainability as accountability requirements. Common themes: traditional observability is insufficient, we need methods to extract hidden agent logic, and hybrid system-level plus semantic approaches are emerging. The academic consensus is clear: agent observability requires fundamentally new techniques."
 
 #### Slide Deck (Visual)
 
-**Academic Signals: Validating the Challenges**
+**Academic Landscape: Recent Research (2024-2025)**
 
-**1. Safety: IPI is a Formally Recognized Threat**
-- **InjecAgent (ACL Findings 2024):** Benchmarks IPI across 30 frameworks, finds persistent vulnerabilities
-- **Key Finding:** "Quiet failures" are common—demands audit-quality traces
+**Three Emerging Themes:**
 
-**2. Cost: Token Growth is a First-Class Research Problem**
-- **S²-MAD (NAACL 2025):** Targets token reduction as primary goal for multi-agent systems
-- **ICLR 2025 Papers:** Document non-linear token growth (~7.5×) as major cost driver
+1. **Traditional Observability is Insufficient**
+   → Agents require new methods beyond logs/traces
+   *[AgentOps, TRiSM]*
 
-**3. A Balanced View is Emerging**
-- **"Stop Overvaluing MAD" (arXiv 2025):** Complex strategies don't always outperform simpler ones
-- **Implication:** Demands empirical cost-benefit analysis
+2. **Cognitive & Semantic Analysis**
+   → Extract hidden reasoning, infer intent from behavior, LLM-as-judge
+   *[Watson, AgentOps]*
 
-**Visual:** Three academic papers with key takeaways (ACL, NAACL, arXiv logos if possible)
+3. **Hybrid Multi-Layer Capture**
+   → Combine app-level + system-level + model-level signals
+   *[AgentSight, Watson]*
 
-*Footer: ¹ACL 2024, ²NAACL 2025, ³arXiv 2025*
+**Visual:** Three-column diagram showing themes with inline citations
+
+*Footer: Survey of AgentOps (Dong, 2024), Watson (Rombaut, 2024), AgentSight (Zheng, 2025), TRiSM (Peng, 2025)*
 
 ---
 

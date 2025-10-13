@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Observability 2025: Safety • Cost • Control</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .slide {
+            display: none;
+        }
+        .slide.active {
+            display: flex;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 flex flex-col items-center justify-center min-h-screen p-4 sm:p-6 md:p-8">
+
+    <div id="presentation-container" class="w-full max-w-5xl">
+        
+        <!-- Slide 1 -->
+        <div class="slide active flex-col justify-center items-center text-center p-8 bg-white rounded-xl shadow-2xl border border-gray-200" style="min-height: 600px;">
+            <h1 class="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 tracking-tight">Agent Observability 2025</h1>
+            <h2 class="text-3xl sm:text-4xl font-semibold text-cyan-600 mt-2">Safety • Cost • Control</h2>
+            <p class="mt-6 text-xl text-gray-500 italic">Towards Agent-Oriented Observability</p>
+            <p class="mt-8 text-lg text-gray-700">Yangpen Hu, Yusheng Zheng</p>
+
+            <div class="mt-12 w-full flex justify-center items-center space-x-2 sm:space-x-4">
+                <div class="bg-gray-200 text-gray-800 py-2 px-4 rounded-lg shadow-md">Three Silos</div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 sm:h-8 sm:w-8 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                <div class="bg-gray-200 text-gray-800 py-2 px-4 rounded-lg shadow-md">Two Gaps</div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 sm:h-8 sm:w-8 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                <div class="bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg">Two-Plane Solution</div>
+            </div>
+        </div>
+
+        <!-- Slide 2 -->
+        <div class="slide flex-col justify-center items-center text-center p-8 bg-white rounded-xl shadow-2xl border border-gray-200" style="min-height: 600px;">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900">The #1 Safety Threat: Indirect Prompt Injection</h1>
+            <p class="mt-4 text-xl text-gray-700 max-w-3xl">Malicious content (files, websites) hijacks agent behavior → "quiet failures"</p>
+            <div class="mt-8 bg-red-50 border border-red-200 rounded-lg p-6 w-full max-w-2xl">
+                <p class="text-2xl font-semibold text-red-600">Problem: No error signal—agent just does the wrong thing</p>
+            </div>
+            <div class="mt-10 w-full flex justify-center items-center space-x-4 text-lg">
+                <div class="flex flex-col items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    <span class="mt-2 font-mono">Malicious.pdf</span>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                <div class="flex flex-col items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <span class="mt-2 font-mono">Agent</span>
+                </div>
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                <div class="flex flex-col items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9V3m0 18a9 9 0 009-9m-9 9a9 9 0 00-9-9" /></svg>
+                    <span class="mt-2 font-mono text-red-600">Sends data to attacker.com</span>
+                </div>
+            </div>
+            <footer class="absolute bottom-8 text-sm text-gray-400">InjecAgent, ACL Findings 2024</footer>
+        </div>
+        
+        <!-- Slide 3 -->
+        <div class="slide flex-col justify-center items-center p-8 bg-white rounded-xl shadow-2xl border border-gray-200" style="min-height: 600px;">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 text-center">Cost & ROI: Two Escalation Fronts</h1>
+            <div class="mt-8 w-full grid md:grid-cols-2 gap-8 items-start">
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <h3 class="text-2xl font-semibold text-cyan-600">Token-Level Costs</h3>
+                    <ul class="mt-4 list-disc list-inside space-y-2 text-gray-700">
+                        <li>Multi-agent debate → <span class="font-bold text-amber-600">~7.5× token growth</span> (NAACL 2025)</li>
+                    </ul>
+                     <div class="mt-6">
+                        <p class="text-gray-500 mb-2">Token Growth vs. Agents</p>
+                        <div class="flex items-end h-32 space-x-2">
+                            <div class="w-full bg-cyan-200 rounded-t-md" style="height: 20%;"></div>
+                            <div class="w-full bg-cyan-300 rounded-t-md" style="height: 45%;"></div>
+                            <div class="w-full bg-cyan-400 rounded-t-md" style="height: 80%;"></div>
+                            <div class="w-full bg-cyan-500 rounded-t-md" style="height: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <h3 class="text-2xl font-semibold text-cyan-600">Infrastructure-Level Costs</h3>
+                    <ul class="mt-4 list-disc list-inside space-y-2 text-gray-700">
+                        <li>Serverless overhead ≈ <span class="font-bold text-amber-600">70% of LLM API cost</span> (TrEnv)</li>
+                    </ul>
+                    <div class="mt-6 flex justify-center">
+                         <div class="relative w-36 h-36 rounded-full" style="background: conic-gradient(#0891b2 0% 59%, #d97706 59% 100%);">
+                            <div class="absolute inset-2 bg-gray-50 rounded-full"></div>
+                            <div class="absolute top-8 left-0 right-0 text-center text-sm">
+                                <p class="font-bold text-amber-700">~41% Infra</p>
+                                <p class="text-cyan-700">~59% API</p>
+                            </div>
+                         </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-8 bg-gray-50 p-6 rounded-lg border border-gray-200 w-full max-w-3xl">
+                <h3 class="text-2xl font-semibold text-gray-900">Unified Cost Model:</h3>
+                <code class="block bg-gray-200 text-amber-700 p-4 rounded-md mt-2 text-center text-lg">Cost(task) = Tokens + API + Infrastructure</code>
+                <p class="mt-4 text-center text-gray-700"><span class="font-semibold text-cyan-600">Observability Needs:</span> Budget caps, loop-stop, cost attribution</p>
+            </div>
+            <footer class="absolute bottom-8 text-sm text-gray-400">¹NAACL 2025, ²arXiv:2509.09525</footer>
+        </div>
+
+        <!-- Slide 4 -->
+        <div class="slide flex-col justify-center items-center p-8 bg-white rounded-xl shadow-2xl border border-gray-200" style="min-height: 600px;">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 text-center">Fragmentation: Multi-Vendor Stacks</h1>
+            <p class="mt-4 text-xl text-gray-700 text-center max-w-3xl">The Problem: No single team owns end-to-end observability</p>
+            
+            <div class="mt-8 w-full max-w-4xl bg-gray-50 p-6 rounded-lg border border-gray-200">
+                <h3 class="text-2xl font-semibold text-center mb-6">Four Layers of Ownership</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+                    <!-- Layer 1 -->
+                    <div class="bg-gray-100 p-4 rounded-lg">
+                        <h4 class="font-bold text-cyan-600 text-lg">SaaS Models</h4>
+                        <p class="text-sm text-gray-500">(OpenAI, Anthropic)</p>
+                        <div class="mt-4 text-red-600 font-semibold border-t-2 border-red-400 pt-2">API-only</div>
+                    </div>
+                    <!-- Layer 2 -->
+                    <div class="bg-gray-100 p-4 rounded-lg">
+                        <h4 class="font-bold text-cyan-600 text-lg">Agent Logic</h4>
+                        <p class="text-sm text-gray-500">(LangChain, custom)</p>
+                        <div class="mt-4 text-green-600 font-semibold border-t-2 border-green-400 pt-2">White box</div>
+                    </div>
+                    <!-- Layer 3 -->
+                    <div class="bg-gray-100 p-4 rounded-lg">
+                        <h4 class="font-bold text-cyan-600 text-lg">Infrastructure</h4>
+                        <p class="text-sm text-gray-500">(K8s, containers)</p>
+                        <div class="mt-4 text-amber-600 font-semibold border-t-2 border-amber-400 pt-2">Ops</div>
+                    </div>
+                     <!-- Layer 4 -->
+                    <div class="bg-gray-100 p-4 rounded-lg">
+                        <h4 class="font-bold text-cyan-600 text-lg">Tools (MCP)</h4>
+                        <p class="text-sm text-gray-500">(Claude Code, Copilot)</p>
+                        <div class="mt-4 text-purple-600 font-semibold border-t-2 border-purple-400 pt-2">Mixed</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-8 text-center">
+                <p class="text-xl text-red-600 font-semibold">Challenge: SDK injection impractical for closed components</p>
+                <p class="mt-2 text-xl text-green-600 font-semibold">Solution: Boundary capture (TLS, syscalls, API) + OTel GenAI</p>
+            </div>
+
+            <footer class="absolute bottom-8 text-sm text-gray-400">¹Microsoft Build 2025, ²Anthropic</footer>
+        </div>
+
+        <!-- Slide 5 -->
+        <div class="slide flex-col justify-center items-center p-8 bg-white rounded-xl shadow-2xl border border-gray-200" style="min-height: 600px;">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 text-center">Standards & Ecosystem (Why Now)</h1>
+            <div class="mt-10 w-full max-w-3xl space-y-6">
+                <h2 class="text-3xl font-semibold text-center text-cyan-600 mb-6">Three Converging Standards</h2>
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 flex items-center space-x-4">
+                    <div class="text-3xl font-bold text-cyan-600 bg-gray-200 p-3 rounded-md">1</div>
+                    <div>
+                        <h3 class="text-2xl font-semibold text-gray-900">OTel GenAI</h3>
+                        <p class="text-gray-700">Stable agent + model spans (Mar 2025)</p>
+                    </div>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 flex items-center space-x-4">
+                    <div class="text-3xl font-bold text-cyan-600 bg-gray-200 p-3 rounded-md">2</div>
+                    <div>
+                        <h3 class="text-2xl font-semibold text-gray-900">OpenInference/OpenLLMetry</h3>
+                        <p class="text-gray-700">OTel-compatible tracers for major frameworks</p>
+                    </div>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 flex items-center space-x-4">
+                    <div class="text-3xl font-bold text-cyan-600 bg-gray-200 p-3 rounded-md">3</div>
+                    <div>
+                        <h3 class="text-2xl font-semibold text-gray-900">MCP (Model Context Protocol)</h3>
+                        <p class="text-gray-700">Tool protocol with platform support (Microsoft, Google)</p>
+                    </div>
+                </div>
+            </div>
+            <p class="mt-10 text-xl text-amber-600 text-center font-semibold max-w-2xl">Why This Matters: Standards enable boundary-based observability for closed systems.</p>
+            <footer class="absolute bottom-8 text-sm text-gray-400">¹OTel Blog 2025, ²Microsoft Build 2025</footer>
+        </div>
+        
+        <!-- Slide 6 -->
+        <div class="slide flex-col justify-center items-center p-8 bg-white rounded-xl shadow-2xl border border-gray-200" style="min-height: 600px;">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 text-center">Background I: APM/Serving</h1>
+            <div class="mt-8 w-full grid md:grid-cols-2 gap-8">
+                <div class="bg-green-50 border border-green-200 p-6 rounded-lg">
+                    <h3 class="text-2xl font-semibold text-green-700">What It Gives</h3>
+                    <ul class="mt-4 list-disc list-inside space-y-2 text-gray-700">
+                        <li>Infrastructure SLOs: throughput, latency, GPU usage</li>
+                        <li>Metrics like tokens/s (vLLM, Triton)</li>
+                    </ul>
+                    <div class="mt-4 p-2 bg-gray-100 rounded-md">
+                        <p class="text-xs text-gray-500">Request Trace (Infra View)</p>
+                        <div class="flex items-center space-x-2 text-sm mt-1">
+                           <span class="bg-green-100 px-2 py-1 rounded">HTTP</span> <span class="text-gray-400">&rarr;</span>
+                           <span class="bg-green-100 px-2 py-1 rounded">Inference</span> <span class="text-gray-400">&rarr;</span>
+                           <span class="bg-green-100 px-2 py-1 rounded">Response</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-red-50 border border-red-200 p-6 rounded-lg">
+                    <h3 class="text-2xl font-semibold text-red-700">What It Misses for Agents</h3>
+                    <ul class="mt-4 list-disc list-inside space-y-2 text-gray-700">
+                        <li>Intent, tool justification, goal attainment</li>
+                        <li>Cross-layer cost attribution</li>
+                        <li>Behavioral assurance & safety</li>
+                    </ul>
+                    <div class="mt-4 p-2 bg-gray-100 rounded-md">
+                        <p class="text-xs text-gray-500">Decision Trajectory (Behavioral View)</p>
+                        <div class="flex items-center flex-wrap gap-2 text-sm mt-1">
+                           <span class="bg-red-100 px-2 py-1 rounded">Goal</span> <span class="text-gray-400">&rarr;</span>
+                           <span class="bg-red-100 px-2 py-1 rounded">Reasoning</span> <span class="text-gray-400">&rarr;</span>
+                           <span class="bg-red-100 px-2 py-1 rounded">Action</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <p class="mt-10 text-2xl text-amber-600 font-bold text-center">Key Distinction: Request trace (infra) ≠ Decision trajectory (behavior)</p>
+            <footer class="absolute bottom-8 text-sm text-gray-400">¹vLLM, ²Triton</footer>
+        </div>
+        
+        <!-- Slide 7 -->
+        <div class="slide flex-col justify-center items-center p-8 bg-white rounded-xl shadow-2xl border border-gray-200" style="min-height: 600px;">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 text-center">Background II: Model-Centric Tools</h1>
+            <div class="mt-8 grid md:grid-cols-2 gap-8 w-full max-w-4xl">
+                <div>
+                    <h3 class="text-2xl font-semibold text-cyan-600">Capabilities</h3>
+                    <ul class="mt-4 space-y-3 text-lg">
+                        <li class="flex items-start"><span class="text-cyan-600 mr-2">&#10003;</span>OTel GenAI: Stable agent/model spans</li>
+                        <li class="flex items-start"><span class="text-cyan-600 mr-2">&#10003;</span>OpenInference, OpenLLMetry: OTel tracers</li>
+                        <li class="flex items-start"><span class="text-cyan-600 mr-2">&#10003;</span>Langfuse, LangSmith, etc: Chain tracing, cost tracking</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-semibold text-amber-600">Limits & Coverage</h3>
+                    <div class="mt-4 space-y-2 text-lg">
+                        <p><span class="inline-block w-4 h-4 bg-green-500 rounded-sm mr-2"></span><span class="font-bold">Strong:</span> Model I/O (prompts, tokens)</p>
+                        <p><span class="inline-block w-4 h-4 bg-yellow-500 rounded-sm mr-2"></span><span class="font-bold">Medium:</span> Application Logic</p>
+                        <p><span class="inline-block w-4 h-4 bg-red-500 rounded-sm mr-2"></span><span class="font-bold">Weak:</span> System (process, files), Network (TLS), Tool Execution</p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-10 w-full max-w-3xl bg-red-50 border border-red-200 p-6 rounded-lg text-center">
+                 <p class="text-xl text-red-600 font-semibold">Challenge: App-side SDKs required, weak cross-layer correlation</p>
+            </div>
+            <footer class="absolute bottom-8 text-sm text-gray-400">¹OTel GenAI, ²Langfuse</footer>
+        </div>
+        
+        <!-- Slide 8 -->
+        <div class="slide flex-col justify-center items-center p-8 bg-white rounded-xl shadow-2xl border border-gray-200" style="min-height: 600px;">
+             <h1 class="text-4xl md:text-5xl font-bold text-gray-900 text-center">Background III: Agent-Level Frameworks</h1>
+             <div class="mt-8 w-full grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-2xl font-semibold text-cyan-600">What They Do</h3>
+                    <ul class="mt-4 list-disc list-inside space-y-2 text-gray-700">
+                        <li><span class="font-semibold">AgentOps:</span> Lifecycle taxonomy & replay</li>
+                        <li><span class="font-semibold">Maxim AI:</span> Trajectory visualization & eval</li>
+                        <li><span class="font-semibold">PromptLayer:</span> OTel traces, versioning</li>
+                        <li><span class="font-semibold">WhyLabs LangKit:</span> Text quality metrics</li>
+                    </ul>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <h3 class="text-2xl font-semibold text-amber-600">What's Missing</h3>
+                    <ul class="mt-4 list-disc list-inside space-y-2 text-gray-700">
+                        <li>Single-agent focus dominates</li>
+                        <li>Multi-agent cost accountability</li>
+                        <li>System-level observability (intents vs actions)</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-10 w-full max-w-3xl text-center">
+                <h3 class="text-2xl font-semibold text-gray-900">Our Contribution:</h3>
+                <p class="mt-2 text-xl text-green-600">Formalize instrumentation + semantic gaps; propose Two-Plane Architecture</p>
+            </div>
+             <footer class="absolute bottom-8 text-sm text-gray-400">¹AgentOps arXiv, ²Maxim AI, ³PromptLayer</footer>
+        </div>
+        
+        <!-- Slide 9 -->
+        <div class="slide flex-col justify-center items-center p-8 bg-white rounded-xl shadow-2xl border border-gray-200" style="min-height: 600px;">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 text-center">Industrial Landscape: Three Tiers & Production Constraints</h1>
+            
+            <div class="mt-6 w-full max-w-4xl">
+                <h3 class="text-2xl text-cyan-600 font-semibold text-center mb-4">The Three Tiers of Agent Observability</h3>
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-200">
+                            <th class="p-3 border-b-2 border-gray-300">Layer</th>
+                            <th class="p-3 border-b-2 border-gray-300">Representative Tools</th>
+                            <th class="p-3 border-b-2 border-gray-300">Core Strength</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="odd:bg-white even:bg-gray-50">
+                            <td class="p-3 border-b border-gray-200 font-semibold">APM/Serving</td>
+                            <td class="p-3 border-b border-gray-200">vLLM, Triton</td>
+                            <td class="p-3 border-b border-gray-200">Infrastructure SLOs (GPU, latency)</td>
+                        </tr>
+                        <tr class="odd:bg-white even:bg-gray-50">
+                            <td class="p-3 border-b border-gray-200 font-semibold">LLM-centric</td>
+                            <td class="p-3 border-b border-gray-200">LangSmith, Langfuse, Phoenix</td>
+                            <td class="p-3 border-b border-gray-200">Model I/O, OTel Adoption</td>
+                        </tr>
+                        <tr class="odd:bg-white even:bg-gray-50">
+                            <td class="p-3 font-semibold">Agent-level</td>
+                            <td class="p-3">Maxim AI, PromptLayer</td>
+                            <td class="p-3">Agent Trajectory & Behavior</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-8 w-full max-w-4xl">
+                <h3 class="text-2xl text-amber-600 font-semibold text-center mb-4">Two Key Production Constraints</h3>
+                <div class="grid md:grid-cols-2 gap-6 text-center">
+                    <div class="bg-red-50 border border-red-200 p-6 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        <h4 class="mt-2 text-xl font-bold">SDKs Are Insufficient</h4>
+                        <p class="mt-1 text-gray-700">Cannot inject into managed components (Claude Code, Windows Copilot) or SaaS APIs.</p>
+                    </div>
+                    <div class="bg-green-50 border border-green-200 p-6 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        <h4 class="mt-2 text-xl font-bold">Standards Are Essential</h4>
+                        <p class="mt-1 text-gray-700">Industry converging on OpenTelemetry for interoperability.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <footer class="absolute bottom-8 text-sm text-gray-400">¹vLLM, ²OTel Blog 2025, ³Microsoft Build 2025</footer>
+        </div>
+        
+        <!-- Slide 10 -->
+        <div class="slide flex-col justify-center p-8 bg-white rounded-xl shadow-2xl border border-gray-200" style="min-height: 600px;">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 text-center">Academic Signals: Validating Production Challenges</h1>
+            <p class="mt-4 text-xl text-gray-600 max-w-3xl text-center">Recent academic work highlights three key trends that mirror real-world production issues.</p>
+            <div class="mt-8 w-full max-w-4xl space-y-6">
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <h3 class="text-2xl font-semibold text-cyan-600">1. Systematic Safety Threats</h3>
+                    <p class="mt-2 text-lg text-gray-700">Formal benchmarks now confirm that <span class="font-semibold">Indirect Prompt Injection (IPI)</span> is a persistent vulnerability across agent frameworks. The key finding is the prevalence of <span class="font-semibold">"quiet failures,"</span> which demand audit-quality trajectory traces to detect.</p>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <h3 class="text-2xl font-semibold text-cyan-600">2. Cost as a Core Research Problem</h3>
+                    <p class="mt-2 text-lg text-gray-700">Token efficiency is no longer just an engineering concern. Top-tier research now treats it as a first-class objective, documenting <span class="font-semibold">non-linear token growth (~7.5×)</span> as a fundamental challenge in multi-agent systems that requires new cost-aware strategies.</p>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <h3 class="text-2xl font-semibold text-cyan-600">3. The Need for a Balanced View on Strategy</h3>
+                    <p class="mt-2 text-lg text-gray-700">A more pragmatic perspective is emerging, with studies showing that complex multi-agent patterns do not always outperform simpler, cheaper alternatives. This reinforces the need for <span class="font-semibold">empirical cost-benefit analysis</span> for any deployed agent architecture.</p>
+                </div>
+            </div>
+            <footer class="absolute bottom-8 text-sm text-gray-400">Key Studies: InjecAgent (ACL 2024), S²-MAD (NAACL 2025), arXiv:2502.08788</footer>
+        </div>
+        
+        <!-- Slide 11 -->
+        <div class="slide flex-col justify-center items-center p-8 bg-white rounded-xl shadow-2xl border border-gray-200" style="min-height: 600px;">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 text-center">Two Gaps & Requirements</h1>
+            <div class="w-full max-w-4xl flex flex-col items-center">
+                 <div class="mt-6 grid md:grid-cols-2 gap-6 w-full">
+                    <div class="bg-red-50 border border-red-200 p-6 rounded-lg">
+                        <h3 class="text-2xl font-semibold text-red-600">Gap 1: Instrumentation Gap</h3>
+                        <p class="mt-2 text-gray-700">Causal signal lost in high-volume system noise. SDKs are brittle, and closed components are inaccessible.</p>
+                    </div>
+                    <div class="bg-amber-50 border border-amber-200 p-6 rounded-lg">
+                        <h3 class="text-2xl font-semibold text-amber-600">Gap 2: Semantic Gap</h3>
+                        <p class="mt-2 text-gray-700">Boundary telemetry shows WHAT happened, not WHY (lacks intent and reasoning).</p>
+                    </div>
+                </div>
+                
+                <div class="my-6 text-5xl text-gray-300">&darr;</div>
+
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 w-full">
+                     <h3 class="text-2xl font-semibold text-cyan-600 text-center">Four Requirements</h3>
+                     <div class="mt-4 grid grid-cols-2 gap-4 text-gray-700">
+                        <p><span class="font-bold text-gray-900">R1:</span> Boundary-based capture (kernel, TLS, API)</p>
+                        <p><span class="font-bold text-gray-900">R2:</span> AI-powered semantic analysis (Cognitive Plane)</p>
+                        <p><span class="font-bold text-gray-900">R3:</span> Standard spans (OTel GenAI)</p>
+                        <p><span class="font-bold text-gray-900">R4:</span> Privacy-preserving (redaction, sampling)</p>
+                     </div>
+                </div>
+            </div>
+            <footer class="absolute bottom-8 text-sm text-gray-400">¹Tetragon, ²Watson arXiv, ³OTel GenAI</footer>
+        </div>
+
+        <!-- Slide 12 -->
+        <div class="slide flex-col justify-center items-center p-8 bg-white rounded-xl shadow-2xl border border-gray-200" style="min-height: 600px;">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 text-center">Formal Definition: Agent Observability</h1>
+            <div class="mt-6 w-full max-w-4xl">
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 text-center">
+                    <p class="text-lg"><span class="font-semibold text-cyan-600">Capability:</span> <span class="font-bold">Capture</span> minimal statistics at stable boundaries + <span class="font-bold">Infer</span> if actions satisfy correctness, safety, and cost constraints.</p>
+                </div>
+
+                <h3 class="text-2xl font-semibold text-center mt-8 mb-4">Paradigm Shift</h3>
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-200 text-cyan-700">
+                            <th class="p-3 border-b-2 border-gray-300">Dimension</th>
+                            <th class="p-3 border-b-2 border-gray-300">Traditional (Systems)</th>
+                            <th class="p-3 border-b-2 border-gray-300">Agentic (Behavioral)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="odd:bg-white even:bg-gray-50">
+                            <td class="p-3 border-b border-gray-200">Primary Goal</td>
+                            <td class="p-3 border-b border-gray-200">System health & availability</td>
+                            <td class="p-3 border-b border-gray-200 font-semibold text-gray-900">Behavioral correctness, safety, trust</td>
+                        </tr>
+                         <tr class="odd:bg-white even:bg-gray-50">
+                            <td class="p-3 border-b border-gray-200">Unit of Analysis</td>
+                            <td class="p-3 border-b border-gray-200">Request trace (HTTP → DB)</td>
+                            <td class="p-3 border-b border-gray-200 font-semibold text-gray-900">Decision trajectory (goal → action)</td>
+                        </tr>
+                        <tr class="odd:bg-white even:bg-gray-50">
+                            <td class="p-3">Failure Modes</td>
+                            <td class="p-3">Exceptions (5xx, crashes)</td>
+                            <td class="p-3 font-semibold text-gray-900">Quiet failures (logic errors, IPI)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+             <footer class="absolute bottom-8 text-sm text-gray-400">¹InjecAgent ACL 2024, ²S²-MAD NAACL 2025</footer>
+        </div>
+
+        <!-- Slide 13 -->
+        <div class="slide flex-col justify-center items-center p-8 bg-white rounded-xl shadow-2xl border border-gray-200" style="min-height: 600px;">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 text-center">Vision: Two-Plane Architecture</h1>
+            <div class="mt-8 grid md:grid-cols-2 gap-8 w-full max-w-4xl relative">
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="w-1 h-full bg-gray-200 hidden md:block"></div>
+                    <div class="h-1 w-full bg-gray-200 md:hidden"></div>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg border border-cyan-200 z-10">
+                    <h3 class="text-2xl font-semibold text-cyan-600">Data Plane</h3>
+                    <ul class="mt-4 list-disc list-inside space-y-2 text-gray-700">
+                        <li>Capture at stable boundaries (model, TLS, syscalls)</li>
+                        <li>No in-app SDK required</li>
+                        <li>Map to OTel GenAI spans</li>
+                        <li>Privacy-first: Redaction, sampling</li>
+                    </ul>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg border border-amber-200 z-10">
+                    <h3 class="text-2xl font-semibold text-amber-600">Cognitive Plane</h3>
+                    <ul class="mt-4 list-disc list-inside space-y-2 text-gray-700">
+                        <li>"Agents observing agents"</li>
+                        <li>Semantic evals, trajectory reconstruction</li>
+                        <li>Policy actions: Quarantine, budget caps</li>
+                    </ul>
+                </div>
+            </div>
+             <div class="mt-8 text-center text-xl text-green-600 font-semibold">
+                Together: A closed loop for safety, cost, and control.
+            </div>
+            <div class="mt-6 text-center text-gray-500 max-w-3xl">
+                <span class="font-bold text-gray-900">Key Metrics:</span> Attack capture rate, $/successful task, runaway prevention, quiet failure detection.
+            </div>
+            <footer class="absolute bottom-8 text-sm text-gray-400">¹OTel GenAI</footer>
+        </div>
+        
+        <!-- Slide 14 -->
+        <div class="slide flex-col justify-center items-center p-8 bg-white rounded-xl shadow-2xl border border-gray-200" style="min-height: 600px;">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 text-center">Vision: Data Plane (Evidence & Practice)</h1>
+            <div class="mt-6 w-full max-w-4xl grid md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <h3 class="font-semibold text-lg text-cyan-600">System Layer (eBPF)</h3>
+                        <p class="text-sm text-gray-700">Tetragon: Process lifecycle, execve, file I/O</p>
+                    </div>
+                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <h3 class="font-semibold text-lg text-cyan-600">Network/TLS Layer (uprobes)</h3>
+                        <p class="text-sm text-gray-700">eCapture: TLS plaintext at library boundary</p>
+                    </div>
+                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <h3 class="font-semibold text-lg text-cyan-600">Model Layer (OTel)</h3>
+                        <p class="text-sm text-gray-700">OTel GenAI: Inference ops (tokens, latency)</p>
+                    </div>
+                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <h3 class="font-semibold text-lg text-cyan-600">Human Layer</h3>
+                        <p class="text-sm text-gray-700">Structured feedback as ground truth</p>
+                    </div>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <h3 class="text-xl font-semibold text-center mb-4 text-amber-600">Deployment Path (90 Days)</h3>
+                    <ol class="relative border-l border-gray-300 space-y-6">
+                        <li class="ml-4"><div class="absolute w-3 h-3 bg-cyan-500 rounded-full mt-1.5 -left-1.5 border border-white"></div><p class="font-semibold">P0 (Wks 1-2): Boundary tracing</p></li>
+                        <li class="ml-4"><div class="absolute w-3 h-3 bg-cyan-500 rounded-full mt-1.5 -left-1.5 border border-white"></div><p class="font-semibold">P1 (Wks 3-4): OTel GenAI spans</p></li>
+                        <li class="ml-4"><div class="absolute w-3 h-3 bg-cyan-500 rounded-full mt-1.5 -left-1.5 border border-white"></div><p class="font-semibold">P2 (Wks 5-8): Cognitive agents</p></li>
+                        <li class="ml-4"><div class="absolute w-3 h-3 bg-cyan-500 rounded-full mt-1.5 -left-1.5 border border-white"></div><p class="font-semibold">P3 (Wks 9-12): Causal graphs, compliance</p></li>
+                    </ol>
+                </div>
+            </div>
+            <footer class="absolute bottom-8 text-sm text-gray-400">¹Tetragon, ²eCapture, ³OTel GenAI</footer>
+        </div>
+        
+        <!-- Slide 15 -->
+        <div class="slide flex-col justify-center items-center p-8 bg-white rounded-xl shadow-2xl border border-gray-200" style="min-height: 600px;">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 text-center">Vision: Cognitive Plane (Algorithms & Outputs)</h1>
+             <div class="mt-6 w-full max-w-4xl grid md:grid-cols-2 gap-6">
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <h3 class="text-xl font-semibold text-cyan-600">Algorithms</h3>
+                    <ul class="mt-4 list-disc list-inside space-y-2 text-gray-700">
+                        <li>Semantic evaluation: Hallucination, loop, tool-misuse detection</li>
+                        <li>Decision trajectory reconstruction (Watson-style surrogate observers)</li>
+                        <li>Multi-layer causality graph (decisions → costs → actions → outcomes)</li>
+                        <li>Cost policies: $/task, tokens/solve thresholds</li>
+                    </ul>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <h3 class="text-xl font-semibold text-amber-600">Outputs & Governance Actions</h3>
+                     <ul class="mt-4 list-disc list-inside space-y-2 text-gray-700">
+                        <li><span class="font-bold">Security:</span> Alerts, isolation, policy enforcement, quarantine</li>
+                        <li><span class="font-bold">Cost:</span> Budgets, rate limiting, fallback policies, routing to cheaper agents</li>
+                        <li><span class="font-bold">Auditability:</span> Multi-agent causal chains, structured summaries</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-6 w-full max-w-4xl bg-gray-50 p-6 rounded-lg border border-gray-200">
+                <h3 class="text-xl font-semibold text-center text-gray-900">Privacy & Compliance</h3>
+                <p class="mt-2 text-center text-gray-700">Redaction/masking, sampling (1-10% full / 90-99% metadata), scoped retention: 7d full / 90d aggregates / ∞ audit logs, OTel privacy attributes, MCP policy metadata, consent & transparency for compliance.</p>
+            </div>
+            <footer class="absolute bottom-8 text-sm text-gray-400">¹Watson arXiv</footer>
+        </div>
+
+    </div>
+
+    <!-- Navigation -->
+    <div class="mt-8 flex items-center justify-between w-full max-w-5xl">
+        <button id="prev-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+            Previous
+        </button>
+        <div id="slide-counter" class="text-gray-500 text-lg font-medium">1 / 15</div>
+        <button id="next-btn" class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+            Next
+        </button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const slideCounter = document.getElementById('slide-counter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    if (i === index) {
+                        slide.classList.add('active');
+                        slide.classList.remove('hidden');
+                    } else {
+                        slide.classList.remove('active');
+                        slide.classList.add('hidden');
+                    }
+                });
+                
+                slideCounter.textContent = `${index + 1} / ${totalSlides}`;
+                prevBtn.disabled = index === 0;
+                nextBtn.disabled = index === totalSlides - 1;
+            }
+
+            nextBtn.addEventListener('click', () => {
+                if (currentSlide < totalSlides - 1) {
+                    currentSlide++;
+                    showSlide(currentSlide);
+                }
+            });
+
+            prevBtn.addEventListener('click', () => {
+                if (currentSlide > 0) {
+                    currentSlide--;
+                    showSlide(currentSlide);
+                }
+            });
+            
+            document.addEventListener('keydown', (e) => {
+                if(e.key === 'ArrowRight') {
+                    nextBtn.click();
+                } else if (e.key === 'ArrowLeft') {
+                    prevBtn.click();
+                }
+            });
+
+            slides.forEach((slide, i) => {
+                if (i !== 0) {
+                    slide.style.display = 'flex';
+                    slide.classList.add('hidden');
+                    slide.classList.remove('active');
+                } else {
+                     slide.style.display = 'flex';
+                }
+            });
+            showSlide(0);
+        });
+    </script>
+</body>
+</html>
